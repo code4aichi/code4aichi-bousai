@@ -1,0 +1,1 @@
+{"name":"code4aichi-bousai-app","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"wrangler pages dev public","deploy":"wrangler pages deploy public --project-name code4aichi-bousai"},"devDependencies":{"wrangler":"^4.0.0"}}
