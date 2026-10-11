@@ -6,12 +6,15 @@ const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'
 let locations=[],map,group,selected=null,filtered=[];
 function matches(p){const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
 function update(){filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
- const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin">⌖</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
+ const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
  list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const p=locations.find(x=>x.id===el.dataset.id);select(p,true)});
- if(group){group.clearLayers();filtered.forEach(p=>{const marker=L.marker([p.lat,p.lng],{title:p.name});marker.bindTooltip(esc(p.name));marker.on('click',()=>select(p,false));group.addLayer(marker)})}
+ if(group){group.clearLayers();filtered.forEach(p=>{const severity=window.bousaiSeverity?.(p)||0;const marker=L.marker([p.lat,p.lng],{title:p.name,...(severity?{icon:L.divIcon({className:'bousai-marker-container',html:`<span class="bousai-marker level-${severity}" aria-label="警報表示">!</span>`,iconSize:[30,36],iconAnchor:[15,36]})}:{})});marker.bindTooltip(esc(p.name));marker.on('click',()=>select(p,false));group.addLayer(marker)})}
 }
 function select(p,zoom){if(!p)return;selected=p;if(map){map.flyTo([p.lat,p.lng],zoom?11:Math.max(map.getZoom(),9),{duration:.45})}showDetail(p)}
 window.bousaiCurrentSelection=()=>selected;
+window.bousaiLocations=()=>locations;
+window.bousaiRerender=update;
+window.bousaiShowDetail=showDetail;
 function showDetail(p){document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
  const names={official:'自治体公式サイト',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'公式X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
  const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));$('detail-links-v2').innerHTML=links.length?links.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join(''):'<p>登録された関連リンクはありません。</p>';
@@ -32,6 +35,6 @@ async function boot(){let r;try{r=await fetch('/locations.json');if(!r.ok)throw 
  $('reset-map').onclick=()=>{map.setView([37.6,137.5],5)};$('hero-search-btn').onclick=goSearch;$('hero-search').addEventListener('keydown',e=>{if(e.key==='Enter')goSearch()});
  $('detail-close').onclick=()=>$('detail-dialog').close();$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
- update();setTimeout(()=>map.invalidateSize(),150);window.addEventListener('hashchange',()=>setTimeout(()=>map.invalidateSize(),200));
+ update();document.dispatchEvent(new Event('bousai:map-ready'));setTimeout(()=>map.invalidateSize(),150);window.addEventListener('hashchange',()=>setTimeout(()=>map.invalidateSize(),200));
 }
 boot();
