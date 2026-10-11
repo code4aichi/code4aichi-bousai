@@ -10,6 +10,19 @@ let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,last
 const category=i=>Number(i.level)||0;
 const itemsAllowed=items=>items.filter(x=>category(x)>=($('show-advisories')?.checked?1:2));
 const resultsFor=p=>results.find(x=>x.prefecture===prefName(p));
+const setText=(id,val)=>{const e=$(id);if(e)e.textContent=String(val)};
+const formatDate=iso=>{if(!iso)return '未取得';const d=new Date(iso);return Number.isNaN(d.valueOf())?'未取得':new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d)+' JST'};
+const officialURL='https://www.jma.go.jp/bosai/';
+const pointCount=()=>window.bousaiLocations?.().length||0;
+function updateMetrics(){
+ const okCount=results.filter(r=>r.ok).length;
+ const affected=(window.bousaiLocations?.()||[]).filter(p=>alertsFor(p,true).length>0).length;
+ setText('alert-impacted',loaded&&areaOk?`${affected.toLocaleString()} 地点`:'未確認');
+ setText('alert-matched',areaOk?`${matchById.size.toLocaleString()} / ${pointCount().toLocaleString()} 地点`:'未確認');
+ setText('alert-offices',loaded?`${okCount} / 47`:'未確認');
+ setText('alert-updated',loaded?formatDate(lastTime):'未確認');
+}
+
 function buildLookup(area){
  const map=new Map();
  for(const [code,unit] of Object.entries(area.class20s||{})){
@@ -47,13 +60,17 @@ function updateDetails(){
  if(!areaOk){el.textContent='地域コード表が取得できないため、自治体単位の判定はできません。';return}
  if(!matchById.has(p.id)){el.innerHTML='<p>この地点は気象庁の市区町村区域と一意に対応付けできていません。警報の有無は未判定です。</p>';return}
  const active=alertsFor(p,true);
- el.innerHTML=active.length?`<ul>${active.map(i=>`<li><strong>${clean(i.name)}</strong>（${clean(i.statuses?.join(' / ')||'発表中')}）</li>`).join('')}</ul><p class="alert-note">発表時刻：${clean(office.reportDatetime||'未取得')} ／ 気象庁の市区町村相当区域で判定</p>`:'<p>取得した発表情報に、この市区町村区域の警報・注意報は含まれていません。最新の情報は気象庁公式サイトをご確認ください。</p>';
+ const reportDate=office.reportDatetime?formatDate(office.reportDatetime):'未取得';
+ el.innerHTML=active.length?`<ul>${active.map(i=>`<li><strong>${clean(i.name)}</strong> <span class="alert-status-name">${clean(i.statuses?.join(' / ')||'発表情報あり')}</span></li>`).join('')}</ul><p class="alert-note">気象庁発表：${clean(reportDate)} ／ 市区町村相当区域で照合</p>`:'<p>取得した発表情報に、該当区域の警報・注意報は含まれていません。ただし安全を保証する表示ではありません。</p>';
 }
 function render(){
  window.bousaiRerender?.();updateDetails();
  const panel=$('alert-region-list');if(!panel)return;panel.replaceChildren();
- if(!$('show-alerts')?.checked||!areaOk)return;
+ const note=$('alert-list-note');
+ if(!$('show-alerts')?.checked){if(note)note.textContent='地図上のアラート表示はオフです';return}
+ if(!loaded||!areaOk){if(note)note.textContent='自治体別情報は未確認です';return}
  const points=(window.bousaiLocations?.()||[]).filter(p=>window.bousaiSeverity(p)>0);
+ if(note)note.textContent=points.length?`${points.length.toLocaleString()}件の対象地点（先頭35件を表示）`:'対象地点は確認されていません。取得状況を確認してください';
  const shown=points.slice(0,35);
  for(const p of shown){const lvl=window.bousaiSeverity(p);const btn=document.createElement('button');btn.className='alert-chip'+(lvl===1?' caution':lvl===4?' extreme':'');btn.textContent='! '+p.prefecture+' '+p.name;btn.onclick=()=>window.bousaiShowDetail?.(p);panel.append(btn)}
  if(points.length>shown.length){const count=document.createElement('span');count.className='alert-overflow';count.textContent=`ほか${points.length-shown.length}地点（地図や検索で確認）`;panel.append(count)}
@@ -66,13 +83,13 @@ async function fetchData(){
   if(!alertResponse.ok)throw Error('警報データの取得失敗');const alert=await alertResponse.json();
   if(!alert.ok||!Array.isArray(alert.results))throw Error('警報データの形式が不正');
   results=alert.results;loaded=true;lastTime=alert.retrievedAt;
-  if(areaResponse.ok){const areas=await areaResponse.json();if(areas.ok&&areas.class20s){areaTable=areas;areaOk=true;matchLocations()}else areaOk=false}else areaOk=false;
+  if(areaResponse.ok){const areas=await areaResponse.json();if(areas.ok&&areas.class20s){areaTable=areas;areaOk=true;matchLocations()}else {areaOk=false;matchById.clear()}}else {areaOk=false;matchById.clear()}
   const matched=matchById.size,failed=results.filter(x=>!x.ok).length;
   const impacted=(window.bousaiLocations?.()||[]).filter(p=>alertsFor(p,true).length).length;
   status.classList.add(failed||!areaOk?'partial':'ok');
   $('alert-summary').textContent=areaOk?`市区町村照合 ${matched.toLocaleString()} / ${(window.bousaiLocations?.()||[]).length.toLocaleString()}地点 · 警報・注意報の発表が確認できた登録地点 ${impacted}件 · 取得失敗 ${failed}都道府県（${new Date(lastTime).toLocaleString('ja-JP')}更新）`:`都道府県データは取得しましたが、地域コード表を取得できません。市区町村への警報表示は保留しています。`;
-  render();
- }catch(e){loaded=false;status.classList.add('failed');$('alert-summary').textContent='警報データが取得できません。地図上の警報表示は最新ではありません。気象庁の公式発表をご確認ください。';render()}
+  updateMetrics();render();
+ }catch(e){loaded=false;results=[];areaOk=false;matchById.clear();lastTime=null;status.classList.add('failed');$('alert-summary').textContent='警報データを取得できません。現在の警報状態は未確認です。気象庁の公式発表をご確認ください。';updateMetrics();render()}
  finally{$('refresh-alerts').disabled=false}
 }
 async function init(){if(!window.map||!window.bousaiLocations)return;
