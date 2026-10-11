@@ -1,32 +1,48 @@
-// Code for AICHI v3.4 - official X links and optional on-demand embedded timeline.
-// No API token, scraping, automated post collection, or third-party requests until explicit user click.
+// Code for AICHI v3.5 - bounded, on-demand X timeline loading.
 'use strict';
 (()=>{
   const byId=id=>document.getElementById(id);
   const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e};
   const validXUrl=(url)=>{try{const u=new URL(String(url));if(!['x.com','twitter.com','www.x.com','www.twitter.com','mobile.twitter.com'].includes(u.hostname))return null;const seg=u.pathname.split('/').filter(Boolean);if(!seg.length || !/^[a-zA-Z0-9_]{1,15}$/.test(seg[0]) || ['search','intent','home','share','i'].includes(seg[0].toLowerCase()))return null;return `https://x.com/${seg[0]}`}catch{return null}};
+  const withTimeout=(promise,ms)=>new Promise((resolve,reject)=>{let finished=false;const timer=setTimeout(()=>{if(!finished){finished=true;reject(new Error('timeout'))}},ms);Promise.resolve(promise).then(v=>{if(!finished){finished=true;clearTimeout(timer);resolve(v)}},e=>{if(!finished){finished=true;clearTimeout(timer);reject(e)}})});
   let revision=0;
-  function render(p){const own=++revision, links=p?.links||{}, ac=byId('detail-x-accounts'), note=byId('detail-x-note'), embed=byId('detail-x-embed-control'), timeline=byId('detail-x-timeline'), button=byId('detail-x-embed-button');
+  function render(p){const own=++revision,links=p?.links||{},ac=byId('detail-x-accounts'),note=byId('detail-x-note'),embed=byId('detail-x-embed-control'),timeline=byId('detail-x-timeline'),button=byId('detail-x-embed-button');
     if(!ac||!note||!embed||!timeline||!button)return;
-    timeline.replaceChildren();embed.hidden=true;ac.replaceChildren();
+    timeline.replaceChildren();embed.hidden=true;ac.replaceChildren();button.disabled=false;button.textContent='公式Xの投稿をここに表示';button.onclick=null;
     const profiles=[['防災関連X',validXUrl(links.disasterX)],['登録済み公式X',validXUrl(links.x)]].filter((e,i,a)=>e[1]&&!a.slice(0,i).some(v=>v[1]===e[1]));
     profiles.forEach(([label,url])=>{const a=make('a','x-account');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.append(make('span','x-account-label',label),make('strong','', '@'+new URL(url).pathname.slice(1)),make('span','','↗'));ac.append(a)});
     const term=`"${p.name}" (災害 OR 避難 OR 断水 OR 警報)`;
-    const search=byId('detail-x');search.href='https://x.com/search?q='+encodeURIComponent(term)+'&f=live';
+    const search=byId('detail-x');if(search)search.href='https://x.com/search?q='+encodeURIComponent(term)+'&f=live';
     const official=byId('detail-x-official-search');
-    if(profiles.length){const user=new URL(profiles[0][1]).pathname.slice(1);official.hidden=false;official.href='https://x.com/search?q='+encodeURIComponent(`from:${user} (災害 OR 防災 OR 避難 OR 断水)`)+'&f=live';note.textContent='登録済みアカウントは旧マイマップ由来です。現在も自治体公式の運用アカウントか、リンク先で必ず確認してください。';embed.hidden=false;button.onclick=()=>loadTimeline(profiles[0][1],timeline,button,own)}
-    else{official.hidden=true;note.textContent='この地点には登録済みのXアカウントがありません。地域名から投稿検索できます。'}
+    if(profiles.length){const user=new URL(profiles[0][1]).pathname.slice(1);if(official){official.hidden=false;official.href='https://x.com/search?q='+encodeURIComponent(`from:${user} (災害 OR 防災 OR 避難 OR 断水)`)+'&f=live'}note.textContent='登録済みアカウントは旧マイマップ由来です。現在の公式性はリンク先で確認してください。Xの設定によっては埋め込み表示できません。';embed.hidden=false;button.onclick=()=>loadTimeline(profiles[0][1],timeline,button,own)}
+    else{if(official)official.hidden=true;note.textContent='この地点には登録済みのXアカウントがありません。地域名から投稿検索できます。'}
+  }
+  async function ensureWidgets(){
+    if(window.twttr?.widgets?.createTimeline)return;
+    let script=document.querySelector('script[data-bousai-x-widgets]');
+    if(!script){script=document.createElement('script');script.src='https://platform.twitter.com/widgets.js';script.async=true;script.dataset.bousaiXWidgets='1';document.head.append(script)}
+    await withTimeout(new Promise((resolve,reject)=>{
+      const onLoad=()=>resolve();const onError=()=>reject(new Error('X widget script unavailable'));
+      script.addEventListener('load',onLoad,{once:true});script.addEventListener('error',onError,{once:true});
+      // Existing script may have already loaded; poll to account for that case.
+      const start=Date.now();const check=()=>{if(window.twttr?.widgets?.createTimeline)resolve();else if(Date.now()-start<7000)setTimeout(check,150)};check();
+    }),8000);
+    if(!window.twttr?.widgets?.createTimeline)throw new Error('X widgets not ready');
   }
   async function loadTimeline(profile,container,button,rev){
     button.disabled=true;button.textContent='X投稿を読み込んでいます…';container.replaceChildren();
-    const fallback=()=>{if(rev!==revision)return;container.replaceChildren(make('p','x-help','投稿を表示できない場合は、上の公式Xリンクを開いて確認してください。'));button.disabled=false;button.textContent='再度表示を試す'};
+    const available=()=>rev===revision&&container.isConnected;
+    const external=()=>{const a=make('a','x-action','Xで投稿を見る ↗');a.href=profile;a.target='_blank';a.rel='noopener noreferrer';return a};
+    const fallback=()=>{if(!available())return;container.replaceChildren(make('p','x-help','X側の制限やブラウザ設定により、投稿を埋め込めませんでした。以下からXのアカウントを直接開いてください。'),external());button.disabled=false;button.textContent='埋め込みを再試行'};
     try{
-      if(!window.twttr?.widgets){await new Promise((resolve,reject)=>{const old=document.querySelector('script[data-bousai-x-widgets]');if(old){let attempts=0;const check=()=>{if(window.twttr?.widgets)resolve();else if(++attempts>60)reject(new Error('X unavailable'));else setTimeout(check,100)};check();return}const s=document.createElement('script');s.src='https://platform.twitter.com/widgets.js';s.async=true;s.dataset.bousaiXWidgets='1';s.onload=resolve;s.onerror=()=>reject(new Error('Widget unavailable'));document.head.append(s)})}
-      if(rev!==revision)return;
-      if(!window.twttr?.widgets?.createTimeline)throw Error('No widget');
-      const handle=new URL(profile).pathname.slice(1);await window.twttr.widgets.createTimeline({sourceType:'profile',screenName:handle},container,{height:400,chrome:'noheader nofooter',dnt:true,lang:'ja'});
-      if(rev!==revision)return;button.textContent='公式Xの投稿を表示中';
-    }catch{fallback()}
+      await ensureWidgets();if(!available())return;
+      const handle=new URL(profile).pathname.slice(1);
+      const result=await withTimeout(window.twttr.widgets.createTimeline({sourceType:'profile',screenName:handle},container,{height:400,chrome:'noheader nofooter',dnt:true,lang:'ja'}),10000);
+      if(!available())return;
+      if(!result&&!container.querySelector('iframe'))throw Error('Embed not available');
+      button.disabled=false;button.textContent='投稿を再読み込み';
+      button.onclick=()=>loadTimeline(profile,container,button,rev);
+    }catch(e){fallback()}
   }
   window.bousaiXDetail=render;
 })();
