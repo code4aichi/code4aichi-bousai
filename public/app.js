@@ -19,6 +19,7 @@ function showDetail(p){document.dispatchEvent(new Event('bousai:selection'));$('
  const names={official:'自治体公式サイト',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'公式X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
  const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));$('detail-links-v2').innerHTML=links.length?links.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join(''):'<p>登録された関連リンクはありません。</p>';
  $('detail-x').href='https://x.com/search?q='+encodeURIComponent(p.name+' (断水 OR 災害 OR 避難)')+'&f=live';
+ window.bousaiXDetail?.(p);
  const dialog=$('detail-dialog');if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
 }
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
