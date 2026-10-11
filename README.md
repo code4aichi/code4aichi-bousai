@@ -1,60 +1,43 @@
-# 全国防災マップ Webアプリ (Code for AICHI)
+# Code for AICHI 全国防災マップ v2
 
-2018年の静的HTML版をベースに、Cloudflare Pages向けに新規構築したWebアプリです。
+## 今回の更新
+- 47都道府県ごとのマイマップ埋め込みを廃止し、全国共通のLeafletマップに登録地点1,916件を表示。
+- 検索対象を自治体名・住所に拡張。都道府県はドロップダウンで絞り込み。
+- ピンをクリックすると登録済みの自治体公式、防災、水道、X、Facebookリンクを表示。
+- 地図ピンをマーカークラスターで集約し、モバイルでも使用可能。
+- マップ表示は閲覧用であり、災害発生地点・避難所を示すものではありません。
 
-## 実装したもの
+## データ由来
+- 2026-10-11に提供された「断水マップ」アーカイブに含まれる47都道府県別 KMZ（KML）を読み取りました。
+- `自治体リスト.kmz` の47代表地点は重複防止のためマップに含めていません。
+- 47都道府県の自治体等1,916ポイントを `public/locations.json` に保存。
+- `scripts/import_kmz.py` で再生成可能。元ZIPを別途保管してください（配布物には元ZIP/Excelは含めていません）。
+- 登録URLは古い可能性があり、**現在の有効性は検証していません**。
 
-- トップページ、全国地図（Leaflet + OpenStreetMap）、47都道府県の代表地点
-- 都道府県検索／地方フィルター／地域詳細ダイアログ
-- 既存47ページのGoogleマイマップリンクを移行（各リンクの有効性は未検証）
-- 気象庁の**現行2026年（令和8年）警報データ**へのCloudflare Pages Functions経由アクセス（都道府県別／ボタン押下）
-- Xの地域別検索リンク、オプションのX API v2 Recent Search連携
-- モバイル・PC対応、ホーム画面追加用のWebアプリマニフェスト
+## Cloudflareへの反映
+現在の `code4aichi/code4aichi-bousai` の**リポジトリ直下**に `public/`, `functions/`, `scripts/`, `package.json` などのファイルを上書きしてcommitします。`public/locations.json` が最重要の新規ファイルです。CloudflareでGitHub自動デプロイが稼働していれば、新しいビルドが行われます。
 
-**制限事項**：原本には市区町村別座標・自治体の個別防災URL一覧がありません。初期版は各都道府県庁付近の代表地点を表示します。市区町村全件表示には正式な全国地方公共団体コード・座標マスターの導入が必要です。
+### Cloudflare Workers利用時
+既存環境がWorkersとして稼働している場合は**現行のデプロイ設定を維持**し、必ず `/locations.json` と `/app.js` が200で返ることを確認してください。Wranglerの静的アセット設定がないWorkerプロジェクトでは、以下の `wrangler.jsonc` の例を追加・調整します（他にwrangler設定が存在する場合は重複させないこと）。
 
-警報は災害発生事実ではありません。API取得に失敗した場合は「情報を確認できない」と明示します。令和8年の警報JSON形式を想定していますが、実際の気象庁データでの結合テストはCloudflare公開後に必ず実施してください。X投稿は未検証の一般投稿であり、公式情報とは区別します。
-
-## Cloudflare Pages デプロイ（推奨：Git連携）
-
-1. このディレクトリを新しいGitHubリポジトリへpushする。
-2. Cloudflare Dashboard → Workers & Pages → Pages → Gitリポジトリ接続。
-3. Build command: `exit 0` / Build output directory: `public` / Root directory: リポジトリルート。
-4. デプロイ後に `/api/warnings?office=230000` を開き `ok:true` を確認。APIエラーが出る場合は気象庁の最新仕様と対象コードを確認。
-5. 地図表示、スマホUI、リンク切れ、防災情報の表記について実機で確認。
-
-### CLIでのデプロイ
-
-```bash
-npm install
-npx wrangler login
-npx wrangler pages project create code4aichi-bousai
-npm run deploy
+```json
+{
+  "name": "code4aichi-bousai",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" }
+}
 ```
 
-Functionsは `functions/api` に配置。Git連携の場合はCloudflare Pagesが検知します。静的ファイルだけをドラッグ＆ドロップするとFunctionsが有効にならない方式があるため、**API込み運用はGit連携またはWrangler CLIでデプロイ**してください。
+このv2ではリアルタイム警報およびX APIのアプリ内表示は**未実装**です。既存の `functions/api` は旧Pages版の参考コードとして同梱していますが、Workersの `wrangler deploy` ではPages Functionsとしては自動稼働しません。
 
-## X API（任意）
+## 検証方法
+1. `https://<公開ドメイン>/locations.json` に配列データが表示される。
+2. 地図が表示され、クラスタ丸数字が出ている。
+3. 「名古屋」で検索して名古屋市関連が表示される。
+4. 愛知県のフィルタで件数が絞り込まれる。
+5. 地点クリックで公式・防災・水道リンクが表示される（リンク先の有効性は別途確認）。
 
-Cloudflare Pages → Settings → Variables and Secrets に `X_BEARER_TOKEN` を **Secret** として登録し再デプロイ。X Developerアカウントと利用可能なRecent Search API権限／従量課金が必要です。APIが未設定なら地域別のX検索リンクだけを利用できます。
-
-## 更新・拡張
-
-- `public/prefectures.json`：都道府県名・代表地点・マイマップURL・当時のXアカウント名・気象庁オフィスコード
-- `public/app.js`：UI、検索、地図、警報表示
-- `functions/api/warnings.js`：気象庁警報データのプロキシ
-- `functions/api/x-posts.js`：オプションのX APIプロキシ
-- `scripts/build_data.py`：2018年版ソースから47都道府県のリンクを再抽出する参考スクリプト（原本は配布物に含まれません）
-
-## 本番化で必要な確認
-
-- 気象庁の2026年以降のデータ仕様、注意報/警報の分類、解除状態、複数発表官署を含む県への対応
-- 気象庁の利用条件・高負荷回避・適切なキャッシュ
-- 既存マイマップの共有範囲・正確性・更新体制
-- 市区町村コード/座標/自治体公式ページのマスター整備
-- X APIの利用条件、投稿を扱う際のプライバシー、偽情報対策
-- 表示のアクセシビリティ、災害時の高負荷試験
-
-## ライセンスと地図
-
-OpenStreetMap contributors / Leaflet。既存コードは参照資料として使用しています。元ソースのライセンス条件を確認してから再配布してください。
+## 注意
+- ピンは行政所在地等の登録地点であり、災害の被害・警報・避難所・断水発生位置を意味しません。
+- Leaflet 1.9.4 / leaflet.markercluster 1.5.3 を jsDelivr CDN からロードします。地図タイルは OpenStreetMap。公共公開で大量アクセスが想定される場合は、タイル提供元との契約等を検討してください。
+- 初回表示で最大1,916件のマーカーを生成するため、さらに規模が増える場合はベクトルタイルやサーバ側検索を検討してください。
