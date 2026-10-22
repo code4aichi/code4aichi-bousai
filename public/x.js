@@ -14,35 +14,8 @@
     const term=`"${p.name}" (災害 OR 避難 OR 断水 OR 警報)`;
     const search=byId('detail-x');if(search)search.href='https://x.com/search?q='+encodeURIComponent(term)+'&f=live';
     const official=byId('detail-x-official-search');
-    if(profiles.length){const user=new URL(profiles[0][1]).pathname.slice(1);if(official){official.hidden=false;official.href='https://x.com/search?q='+encodeURIComponent(`from:${user} (災害 OR 防災 OR 避難 OR 断水)`)+'&f=live'}note.textContent='登録済みアカウントは旧マイマップ由来です。現在の公式性はリンク先で確認してください。Xの設定によっては埋め込み表示できません。';embed.hidden=false;button.onclick=()=>loadTimeline(profiles[0][1],timeline,button,own)}
+    if(profiles.length){const user=new URL(profiles[0][1]).pathname.slice(1);if(official){official.hidden=false;official.href='https://x.com/search?q='+encodeURIComponent(`from:${user} (災害 OR 防災 OR 避難 OR 断水)`)+'&f=live'}note.textContent='登録済みアカウントは旧マイマップ由来です。現在の公式性はリンク先で確認してください。投稿はXで直接ご確認ください。';embed.hidden=true}
     else{if(official)official.hidden=true;note.textContent='この地点には登録済みのXアカウントがありません。地域名から投稿検索できます。'}
-  }
-  async function ensureWidgets(){
-    if(window.twttr?.widgets?.createTimeline)return;
-    let script=document.querySelector('script[data-bousai-x-widgets]');
-    if(!script){script=document.createElement('script');script.src='https://platform.twitter.com/widgets.js';script.async=true;script.dataset.bousaiXWidgets='1';document.head.append(script)}
-    await withTimeout(new Promise((resolve,reject)=>{
-      const onLoad=()=>resolve();const onError=()=>reject(new Error('X widget script unavailable'));
-      script.addEventListener('load',onLoad,{once:true});script.addEventListener('error',onError,{once:true});
-      // Existing script may have already loaded; poll to account for that case.
-      const start=Date.now();const check=()=>{if(window.twttr?.widgets?.createTimeline)resolve();else if(Date.now()-start<7000)setTimeout(check,150)};check();
-    }),8000);
-    if(!window.twttr?.widgets?.createTimeline)throw new Error('X widgets not ready');
-  }
-  async function loadTimeline(profile,container,button,rev){
-    button.disabled=true;button.textContent='X投稿を読み込んでいます…';container.replaceChildren();
-    const available=()=>rev===revision&&container.isConnected;
-    const external=()=>{const a=make('a','x-action','Xで投稿を見る ↗');a.href=profile;a.target='_blank';a.rel='noopener noreferrer';return a};
-    const fallback=()=>{if(!available())return;container.replaceChildren(make('p','x-help','X側の制限やブラウザ設定により、投稿を埋め込めませんでした。以下からXのアカウントを直接開いてください。'),external());button.disabled=false;button.textContent='埋め込みを再試行'};
-    try{
-      await ensureWidgets();if(!available())return;
-      const handle=new URL(profile).pathname.slice(1);
-      const result=await withTimeout(window.twttr.widgets.createTimeline({sourceType:'profile',screenName:handle},container,{height:400,chrome:'noheader nofooter',dnt:true,lang:'ja'}),10000);
-      if(!available())return;
-      if(!result&&!container.querySelector('iframe'))throw Error('Embed not available');
-      button.disabled=false;button.textContent='投稿を再読み込み';
-      button.onclick=()=>loadTimeline(profile,container,button,rev);
-    }catch(e){fallback()}
   }
   window.bousaiXDetail=render;
 })();

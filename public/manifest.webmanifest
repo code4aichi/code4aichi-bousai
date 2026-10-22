@@ -1,1 +1,19 @@
-{"name":"全国防災マップ | Code for AICHI","short_name":"全国防災マップ","description":"全国の地域別防災情報ポータル","start_url":"/","display":"standalone","background_color":"#ffffff","theme_color":"#10344a","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "ミエル防災 | Code for AICHI",
+  "short_name": "ミエル防災",
+  "description": "全国の災害・避難・ライフライン情報",
+  "start_url": "/mieru-bosai/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10344a",
+  "icons": [
+    {
+      "src": "/mieru-bosai/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "/mieru-bosai/",
+  "scope": "/mieru-bosai/"
+}

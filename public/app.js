@@ -15,27 +15,32 @@ window.bousaiCurrentSelection=()=>selected;
 window.bousaiLocations=()=>locations;
 window.bousaiRerender=update;
 window.bousaiShowDetail=showDetail;
-function showDetail(p){document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
+function showDetail(p){selected=p;document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
  const names={official:'自治体公式サイト',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'公式X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
- const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));$('detail-links-v2').innerHTML=links.length?links.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join(''):'<p>登録された関連リンクはありません。</p>';
+ const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));
+ const sections=[['防災・避難の公式情報',['disaster']],['水道・断水・生活情報',['water','utility']],['自治体・その他の発信',['official','x','disasterX','facebook']]];
+ $('detail-links-v2').innerHTML=links.length?sections.map(([title,keys])=>{const items=links.filter(([k])=>keys.includes(k));return items.length?`<div class="link-category"><h3>${esc(title)}</h3>${items.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join('')}</div>`:''}).join('')+links.filter(([k])=>!sections.some(([,keys])=>keys.includes(k))).map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} ↗</a>`).join(''):'<p>登録された関連リンクはありません。</p>';
  $('detail-x').href='https://x.com/search?q='+encodeURIComponent(p.name+' (断水 OR 災害 OR 避難)')+'&f=live';
  window.bousaiXDetail?.(p);
- const dialog=$('detail-dialog');if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
+ const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(matchMedia('(max-width: 800px)').matches)dialog.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
-function goSearch(){const q=$('hero-search').value.trim();location.hash='map';$('location-search').value=q;update();if(q&&filtered.length===1)select(filtered[0],true);else if(q&&filtered.length<100)focusData();setTimeout(()=>map?.invalidateSize(),300)}
-async function boot(){let r;try{r=await fetch('/locations.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);locations=await r.json();if(!Array.isArray(locations))throw new Error('Invalid locations')}catch(e){$('map-canvas').textContent='地域データを読み込めませんでした。ページを再読み込みしてください。';return}
+function setupWithoutMap(){
+ $('region-detail-slot').append($('detail-dialog'));
+ $('location-search').addEventListener('input',update);$('pref-filter').addEventListener('change',()=>{update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
+ $('reset-map').onclick=()=>{map?.setView([37.6,137.5],5)};
+ $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
+ $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
+}
+async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);locations=await r.json();if(!Array.isArray(locations))throw new Error('Invalid locations')}catch(e){$('map-canvas').textContent='地域データを読み込めませんでした。ページを再読み込みしてください。';return}
  const prefs=[...new Set(locations.map(x=>x.prefecture))].sort((a,b)=>a.localeCompare(b,'ja'));for(const p of prefs){const option=document.createElement('option');option.value=p;option.textContent=p;$('pref-filter').append(option)}
- if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図ライブラリを読み込めませんでした。</div>';return}
+ setupWithoutMap();
+ if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
  map=L.map('map-canvas',{zoomControl:false,minZoom:4,zoomSnap:.5,scrollWheelZoom:false}).setView([37.6,137.5],5);
  L.control.zoom({position:'bottomright'}).addTo(map);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
  window.map=map;
  group=typeof L.markerClusterGroup==='function'?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:55,showCoverageOnHover:false}):L.layerGroup();group.addTo(map);
- $('location-search').addEventListener('input',update);$('pref-filter').addEventListener('change',()=>{update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{$('location-search').value='';$('pref-filter').value='';selected=null;update();map.setView([37.6,137.5],5)};
- $('reset-map').onclick=()=>{map.setView([37.6,137.5],5)};$('hero-search-btn').onclick=goSearch;$('hero-search').addEventListener('keydown',e=>{if(e.key==='Enter')goSearch()});
- $('detail-close').onclick=()=>$('detail-dialog').close();$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
- $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
  update();document.dispatchEvent(new Event('bousai:map-ready'));setTimeout(()=>map.invalidateSize(),150);window.addEventListener('hashchange',()=>setTimeout(()=>map.invalidateSize(),200));
 }
 boot();

@@ -6,7 +6,7 @@ const clean=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':
 const norm=s=>String(s||'').normalize('NFKC').replace(/[\s　]/g,'').replace(/ヶ/g,'ケ').replace(/ケ丘/g,'ヶ丘');
 const PREF_ALIAS={'北海道':'北海道','東京':'東京都','京都':'京都府','大阪':'大阪府'};
 const prefName=p=>PREF_ALIAS[p]||(/[都道府県]$/.test(p)?p:p+'県');
-let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,lastTime=null;
+let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,lastTime=null,fetching=false;
 const category=i=>Number(i.level)||0;
 const itemsAllowed=items=>items.filter(x=>category(x)>=($('show-advisories')?.checked?1:2));
 const resultsFor=p=>results.find(x=>x.prefecture===prefName(p));
@@ -55,7 +55,7 @@ window.bousaiBadge=p=>{const lvl=window.bousaiSeverity(p);return lvl?`<b class="
 function updateDetails(){
  const el=$('detail-alerts'),p=window.bousaiCurrentSelection?.();if(!el||!p)return;
  const office=resultsFor(p.prefecture);
- if(!loaded){el.textContent='気象庁データの取得を確認中です。';return}
+ if(!loaded){el.textContent=fetching?'気象庁データを取得しています。':'警報情報を取得できていません。現在の状況は未確認です。気象庁の公式情報をご確認ください。';return}
  if(!office?.ok){el.textContent='この都道府県の情報を取得できませんでした。';return}
  if(!areaOk){el.textContent='地域コード表が取得できないため、自治体単位の判定はできません。';return}
  if(!matchById.has(p.id)){el.innerHTML='<p>この地点は気象庁の市区町村区域と一意に対応付けできていません。警報の有無は未判定です。</p>';return}
@@ -75,11 +75,12 @@ function render(){
  for(const p of shown){const lvl=window.bousaiSeverity(p);const btn=document.createElement('button');btn.className='alert-chip'+(lvl===1?' caution':lvl===4?' extreme':'');btn.textContent='! '+p.prefecture+' '+p.name;btn.onclick=()=>window.bousaiShowDetail?.(p);panel.append(btn)}
  if(points.length>shown.length){const count=document.createElement('span');count.className='alert-overflow';count.textContent=`ほか${points.length-shown.length}地点（地図や検索で確認）`;panel.append(count)}
 }
+window.bousaiRefreshDetails=updateDetails;
 async function fetchData(){
- const status=$('alert-status');if(!status)return;
+ const status=$('alert-status');if(!status||fetching)return;fetching=true;
  status.className='alert-status';$('alert-summary').textContent='気象庁の警報・注意報を取得しています…';$('refresh-alerts').disabled=true;
  try{
-  const [alertResponse,areaResponse]=await Promise.all([fetch('/api/alerts',{cache:'no-store'}),fetch('/api/areas',{cache:'no-store'})]);
+  const [alertResponse,areaResponse]=await Promise.all([fetch('/mieru-bosai/api/alerts',{cache:'no-store'}),fetch('/mieru-bosai/api/areas',{cache:'no-store'})]);
   if(!alertResponse.ok)throw Error('警報データの取得失敗');const alert=await alertResponse.json();
   if(!alert.ok||!Array.isArray(alert.results))throw Error('警報データの形式が不正');
   results=alert.results;loaded=true;lastTime=alert.retrievedAt;
@@ -87,12 +88,12 @@ async function fetchData(){
   const matched=matchById.size,failed=results.filter(x=>!x.ok).length;
   const impacted=(window.bousaiLocations?.()||[]).filter(p=>alertsFor(p,true).length).length;
   status.classList.add(failed||!areaOk?'partial':'ok');
-  $('alert-summary').textContent=areaOk?`市区町村照合 ${matched.toLocaleString()} / ${(window.bousaiLocations?.()||[]).length.toLocaleString()}地点 · 警報・注意報の発表が確認できた登録地点 ${impacted}件 · 取得失敗 ${failed}都道府県（${new Date(lastTime).toLocaleString('ja-JP')}更新）`:`都道府県データは取得しましたが、地域コード表を取得できません。市区町村への警報表示は保留しています。`;
+  $('alert-summary').textContent=areaOk?`気象警報・注意報 · ${formatDate(lastTime)}取得 · 5分ごとに更新${failed?' · 一部地域は未確認':''}`:'地域コード表を取得できません。自治体ごとの警報は未確認です。';
   updateMetrics();render();
  }catch(e){loaded=false;results=[];areaOk=false;matchById.clear();lastTime=null;status.classList.add('failed');$('alert-summary').textContent='警報データを取得できません。現在の警報状態は未確認です。気象庁の公式発表をご確認ください。';updateMetrics();render()}
- finally{$('refresh-alerts').disabled=false}
+ finally{fetching=false;$('refresh-alerts').disabled=false;updateDetails()}
 }
-async function init(){if(!window.map||!window.bousaiLocations)return;
+async function init(){if(!window.bousaiLocations)return;
  $('refresh-alerts').onclick=fetchData;
  $('show-alerts').onchange=render;$('show-advisories').onchange=render;
  document.addEventListener('bousai:selection',updateDetails);
