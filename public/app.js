@@ -3,7 +3,14 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'');
-let locations=[],map,group,selected=null,filtered=[];
+let locations=[],map,group,selected=null,filtered=[],favorites; 
+function renderSaved(){
+ const list=$('saved-regions-list');
+ const saved=favorites.all();
+ list.innerHTML=saved.length?saved.map(p=>`<button type="button" class="saved-region" data-id="${esc(p.id)}"><span aria-hidden="true">★</span> ${esc(p.name)}<small>${esc(p.prefecture)}</small></button>`).join(''):'<span class="saved-empty">地域を選び、「この地域を保存」を押すと、ここからすぐに開けます。</span>';
+ list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>select(locations.find(p=>p.id===el.dataset.id),true));
+ if(selected){const saved=favorites.has(selected);$('save-region').textContent=saved?'★ 保存済み（解除）':'☆ この地域を保存';$('save-region').setAttribute('aria-pressed',String(saved));}
+}
 function matches(p){const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
 function update(){filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
  const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
@@ -15,7 +22,7 @@ window.bousaiCurrentSelection=()=>selected;
 window.bousaiLocations=()=>locations;
 window.bousaiRerender=update;
 window.bousaiShowDetail=showDetail;
-function showDetail(p){selected=p;document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
+function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
  const names={official:'自治体公式サイト',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'公式X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
  const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));
  const sections=[['防災・避難の公式情報',['disaster']],['水道・断水・生活情報',['water','utility']],['自治体・その他の発信',['official','x','disasterX','facebook']]];
@@ -27,6 +34,8 @@ function showDetail(p){selected=p;document.dispatchEvent(new Event('bousai:selec
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
+ $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
+ renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
  $('location-search').addEventListener('input',update);$('pref-filter').addEventListener('change',()=>{update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
  $('reset-map').onclick=()=>{map?.setView([37.6,137.5],5)};
  $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
@@ -34,6 +43,9 @@ function setupWithoutMap(){
 }
 async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);locations=await r.json();if(!Array.isArray(locations))throw new Error('Invalid locations')}catch(e){$('map-canvas').textContent='地域データを読み込めませんでした。ページを再読み込みしてください。';return}
  const prefs=[...new Set(locations.map(x=>x.prefecture))].sort((a,b)=>a.localeCompare(b,'ja'));for(const p of prefs){const option=document.createElement('option');option.value=p;option.textContent=p;$('pref-filter').append(option)}
+ const {createFavorites}=await import('/mieru-bosai/favorites.mjs?v=4.2.0');
+ let storage;try{storage=window.localStorage}catch{storage={getItem(){throw new Error('Storage unavailable')},setItem(){throw new Error('Storage unavailable')}}}
+ favorites=createFavorites(storage,locations);
  setupWithoutMap();
  if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
  map=L.map('map-canvas',{zoomControl:false,minZoom:4,zoomSnap:.5,scrollWheelZoom:false}).setView([37.6,137.5],5);
