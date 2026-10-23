@@ -43,11 +43,18 @@ function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event
  const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(!savedFocusId&&matchMedia('(max-width: 800px)').matches)dialog.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
+function searchRegions(){
+ savedFocusId=null;selected=null;
+ const dialog=$('detail-dialog');if(dialog.open)dialog.close();
+ $('region-browser').hidden=false;
+ update();
+ if($('location-search').value.trim()||$('pref-filter').value)focusData();
+}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
  $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
  renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
- $('location-search').addEventListener('input',()=>{savedFocusId=null;update()});$('pref-filter').addEventListener('change',()=>{savedFocusId=null;update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
+ $('location-search').addEventListener('input',searchRegions);$('pref-filter').addEventListener('change',searchRegions);$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
  $('reset-map').onclick=()=>{map?.setView([37.6,137.5],5)};
  $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));

@@ -37,3 +37,15 @@ button,a,input,select,summary{touch-action:manipulation}button:focus-visible,a:f
 .saved-regions{margin:0 0 16px;padding:14px 16px;background:#f3f8f9;border:1px solid #dce8ed;border-radius:12px}.saved-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}.saved-heading strong{font-size:14px}.saved-heading small,.saved-empty{font-size:12px;color:#526c78}.saved-regions-list{display:flex;gap:8px;flex-wrap:wrap}.saved-region,.save-region{min-height:44px;border:1px solid #bcd6d6;border-radius:9px;background:white;color:#174d55;padding:9px 12px;font-weight:700}.saved-region small{margin-left:8px;font-size:11px;font-weight:400}.saved-region:hover,.save-region:hover{background:#e5f5f2}.saved-region span{color:#087c70}.save-region{margin-top:10px;font-size:12px}.save-region[aria-pressed="true"]{background:#e1f3ed;border-color:#85b8aa}.saved-regions p{font-size:12px;line-height:1.6;margin:8px 0 0}.saved-regions p:empty{display:none}@media(max-width:800px){.saved-regions{padding:12px}.saved-heading{gap:6px}.saved-heading small{font-size:11px}.saved-region{flex:0 1 auto;max-width:100%;overflow-wrap:anywhere}}
 
 .v2-map-shell{scroll-margin-top:90px}
+
+/* v4.3.1: keep the legend outside map tiles and respect hidden panels. */
+[hidden]{display:none!important}
+.v2-map-area{display:flex;flex-direction:column;min-height:0}
+.v2-map-head{position:static;order:0;flex:none;pointer-events:auto;display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0;padding:10px 12px;background:#f7fbfc;border-bottom:1px solid #d3dfe3;z-index:auto;flex-wrap:wrap}
+.v2-map-head .map-legend{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;min-width:0}
+.v2-map-head span{background:none;box-shadow:none;border-radius:0;padding:0;font-size:11px;line-height:1.6;color:#315567}
+.v2-map-head span::before{content:none;display:none}
+.v2-map-head .alert-legend{color:#9a3c24}
+.v2-map-head button{flex-shrink:0;min-height:40px}
+#map-canvas{order:1;flex:1;min-height:0;height:auto}
+@media(max-width:800px){.v2-map-area{height:400px;min-height:400px}.v2-map-head{padding:8px 10px}.v2-map-head .map-legend{gap:4px 10px}.v2-map-head span{font-size:10px}}
