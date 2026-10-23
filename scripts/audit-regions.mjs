@@ -1,0 +1,22 @@
+// node scripts/audit-regions.mjs <downloaded JMA area.json>
+import fs from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {buildRegionMatches} from '../public/region-match.mjs';
+import {AREA_SOURCE} from '../public/jma-offices.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url));
+if(!process.argv[2])throw Error('Specify the official JMA area.json snapshot');
+const bytes=fs.readFileSync(path.join(root,'public/locations.json'));
+const areaBytes=fs.readFileSync(process.argv[2]);
+const places=JSON.parse(bytes),area=JSON.parse(areaBytes);
+const matches=buildRegionMatches(places,area);
+const counts={matched:0,ambiguous:0,unmatched:0};
+const records=places.map(p=>{const m=matches.get(p.id);counts[m.status]++;return {name:p.name,prefecture:p.prefecture,...m}});
+const output={generatedAt:new Date().toISOString(),sourceURL:AREA_SOURCE,areaSHA256:createHash('sha256').update(areaBytes).digest('hex'),locationsSHA256:createHash('sha256').update(bytes).digest('hex'),total:places.length,counts,notes:['区域名の一致はリンクの公式性・有効性を保証しません。','自治体コード・水道事業者の対象地域は未設定。','matchedは都道府県と気象庁の市町村相当区域名が一意に一致したことを示します。'],records};
+fs.mkdirSync(path.join(root,'verification'),{recursive:true});
+fs.writeFileSync(path.join(root,'verification/region-audit.json'),JSON.stringify(output,null,2)+'\n');
+const quote=s=>'"'+String(s??'').replaceAll('"','""')+'"';
+const fields=['locationId','name','prefecture','status','reason','areaCode','areaName','officeCode','officeName','sourceURL'];
+fs.writeFileSync(path.join(root,'verification/region-audit.csv'),'\uFEFF'+[fields,...records.map(r=>fields.map(f=>r[f]))].map(row=>row.map(quote).join(',')).join('\n')+'\n');
+console.log(JSON.stringify({total:places.length,counts}));
