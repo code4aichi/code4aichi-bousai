@@ -3,15 +3,26 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'');
-let locations=[],map,group,selected=null,filtered=[],favorites; 
+let locations=[],map,group,selected=null,filtered=[],favorites,savedFocusId=null; 
 function renderSaved(){
  const list=$('saved-regions-list');
  const saved=favorites.all();
  list.innerHTML=saved.length?saved.map(p=>`<button type="button" class="saved-region" data-id="${esc(p.id)}"><span aria-hidden="true">★</span> ${esc(p.name)}<small>${esc(p.prefecture)}</small></button>`).join(''):'<span class="saved-empty">地域を選び、「この地域を保存」を押すと、ここからすぐに開けます。</span>';
- list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>select(locations.find(p=>p.id===el.dataset.id),true));
+ list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openSavedRegion(locations.find(p=>p.id===el.dataset.id)));
  if(selected){const saved=favorites.has(selected);$('save-region').textContent=saved?'★ 保存済み（解除）':'☆ この地域を保存';$('save-region').setAttribute('aria-pressed',String(saved));}
 }
-function matches(p){const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
+function openSavedRegion(p){
+ if(!p)return;
+ savedFocusId=p.id;
+ $('location-search').value=p.name;
+ $('pref-filter').value=p.prefecture;
+ // Render the selected marker before moving the map; other search filters
+ // must not hide a saved region from a different prefecture.
+ showDetail(p);
+ if(map){map.stop();map.invalidateSize({pan:false});map.setView([p.lat,p.lng],14,{animate:false});}
+ document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function matches(p){if(savedFocusId)return p.id===savedFocusId;const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
 function update(){filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
  const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
  list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const p=locations.find(x=>x.id===el.dataset.id);select(p,true)});
@@ -29,14 +40,14 @@ function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event
  $('detail-links-v2').innerHTML=links.length?sections.map(([title,keys])=>{const items=links.filter(([k])=>keys.includes(k));return items.length?`<div class="link-category"><h3>${esc(title)}</h3>${items.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join('')}</div>`:''}).join('')+links.filter(([k])=>!sections.some(([,keys])=>keys.includes(k))).map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} ↗</a>`).join(''):'<p>登録された関連リンクはありません。</p>';
  $('detail-x').href='https://x.com/search?q='+encodeURIComponent(p.name+' (断水 OR 災害 OR 避難)')+'&f=live';
  window.bousaiXDetail?.(p);
- const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(matchMedia('(max-width: 800px)').matches)dialog.scrollIntoView({behavior:'smooth',block:'start'});
+ const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(!savedFocusId&&matchMedia('(max-width: 800px)').matches)dialog.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
  $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
  renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
- $('location-search').addEventListener('input',update);$('pref-filter').addEventListener('change',()=>{update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
+ $('location-search').addEventListener('input',()=>{savedFocusId=null;update()});$('pref-filter').addEventListener('change',()=>{savedFocusId=null;update();if($('pref-filter').value)focusData()});$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
  $('reset-map').onclick=()=>{map?.setView([37.6,137.5],5)};
  $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
