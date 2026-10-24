@@ -6,7 +6,7 @@ async function ui(payload,reject=false){
  const fields=new Map(),layers=[];
  const el=id=>{if(!fields.has(id))fields.set(id,{checked:true,disabled:false,textContent:'',innerHTML:''});return fields.get(id)};
  const map={};const group={addTo(){return this},clearLayers(){layers.length=0},addLayer(m){layers.push(m)}};
- const context=vm.createContext({window:{map},L:{layerGroup:()=>group,divIcon:x=>x,marker:(point,options)=>({point,options,bindPopup(){return this}})},Date,Intl,Map,Number,String,Array,Math,AbortSignal,setInterval(){},document:{hidden:false,getElementById:el,addEventListener(){},querySelectorAll:()=>[]},fetch:async()=>{if(reject)throw Error();return Response.json(payload)}});
+ const context=vm.createContext({window:{map},L:{layerGroup:()=>group,divIcon:x=>x,marker:(point,options)=>({point,options,bindPopup(){return this}})},Date,Intl,Map,Number,String,Array,Math,AbortSignal,Event,setInterval(){},document:{hidden:false,getElementById:el,addEventListener(){},dispatchEvent(){},querySelectorAll:()=>[]},fetch:async()=>{if(reject)throw Error();return Response.json(payload)}});
  vm.runInContext(fs.readFileSync(new URL('../public/seismic.js',import.meta.url),'utf8'),context);
  for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));
  return {fields,layers};

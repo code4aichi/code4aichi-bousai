@@ -17,7 +17,7 @@ export function parseReport(input,url,family){
  return {family,eventId,title:text(h.Title)||text(c.Title),seriesTitle:text(c.Title),editorialOffice:text(c.EditorialOffice),reportedAt,updatedAt,status,infoType,cancelled,sourceURL:url,
  headline:text(h.Headline?.Text),originTime:date(eq.OriginTime),hypocenter:text(area.Name),magnitude:text(eq.Magnitude)||null,maxIntensity:text(b.Intensity?.Observation?.MaxInt)||null,coordinates:normal&&!cancelled?coords:null,
  // Categories belong to this historical bulletin, never a computed all-clear state.
- areas:arr(b.Tsunami?.Forecast?.Item).map(i=>({name:text(i.Area?.Name),code:text(i.Area?.Code),category:text(i.Category?.Kind?.Name)})).filter(x=>x.name),comment:text(b.Comments?.ForecastComment?.Text)||text(b.Text)};
+ areas:arr(b.Tsunami?.Forecast?.Item).map(i=>({name:text(i.Area?.Name),code:text(i.Area?.Code),category:text(i.Category?.Kind?.Name),categoryCode:text(i.Category?.Kind?.Code)})).filter(x=>x.name),comment:text(b.Comments?.ForecastComment?.Text)||text(b.Text)};
 }
 export function latestReports(reports){const groups=new Map();for(const r of reports){const key=JSON.stringify([r.family,r.seriesTitle,r.editorialOffice,r.status,r.eventId||r.sourceURL]);if(!groups.has(key)||Date.parse(r.updatedAt)>Date.parse(groups.get(key).updatedAt))groups.set(key,r)}return [...groups.values()].sort((a,b)=>Date.parse(b.updatedAt)-Date.parse(a.updatedAt))}
 async function read(url,ttl){const r=await fetch(url,{headers:{Accept:'application/xml'},signal:AbortSignal.timeout(8000),cf:{cacheTtl:ttl,cacheEverything:true}});if(!r.ok)throw Error('JMA unavailable');return r.text()}

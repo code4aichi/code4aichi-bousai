@@ -1,0 +1,9 @@
+{
+  "sourceURL": "https://www.jma.go.jp/bosai/common/const/geojson/tsunami.json",
+  "descriptionURL": "https://www.jma.go.jp/jma/kishou/know/jishin/joho/tsunami-yohoku.html",
+  "retrievedAt": "2026-10-24T04:42:49.488291+00:00",
+  "sha256": "1acde2b6c6a43843fe171781e8126a8db82ef2dd42a2187db66a3a708fab1dc3",
+  "featureCount": 66,
+  "geometryType": "MultiLineString",
+  "note": "気象庁の沿岸線データを変更せず収録。津波の浸水想定・被害範囲ではありません。"
+}

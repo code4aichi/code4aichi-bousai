@@ -19,10 +19,11 @@
   if(!window.map||!mapEligible(r)||!lastSuccess||Date.now()-lastSuccess>120000)return;
   $('show-earthquakes').checked=true;draw();window.map.stop();window.map.invalidateSize({pan:false});window.map.setView([r.coordinates.lat,r.coordinates.lng],7,{animate:false});markers.get(r.sourceURL)?.openPopup();document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
  }
+ function publish(){window.bousaiSeismicData=lastData;document.dispatchEvent(new Event('bousai:seismic-data'));}
  function render(){
   for(const family of ['earthquake','tsunami']){
    const list=$(family+'-reports'),items=reports.filter(x=>x.family===family);
-   list.innerHTML=items.length?items.map((r,index)=>`<article class="seismic-report"><div class="seismic-report-heading"><b>${esc(family==='earthquake'?(r.hypocenter||r.title):r.title)}</b><span class="seismic-label ${r.status!=='通常'?'exercise':''}">${esc(r.status||'状態不明')}・${esc(r.infoType||'種別不明')}</span></div><p class="seismic-time">発表：${esc(when(r.reportedAt))}<br>更新：${esc(when(r.updatedAt))}</p>${family==='earthquake'?`<p>発生：${esc(when(r.originTime))}<br>最大震度 <strong>${esc(intensity(r.maxIntensity))}</strong> ／ M${esc(r.magnitude&&Number.isFinite(Number(r.magnitude))?r.magnitude:'不明')}</p>`:''}${r.headline?`<p class="seismic-headline">${esc(r.headline)}</p>`:''}${r.areas?.length?`<details><summary>この発表の対象地域（${r.areas.length}区域）</summary><ul>${r.areas.map(a=>`<li>${esc(a.name)}：${esc(a.category||'種別不明')}</li>`).join('')}</ul></details>`:''}<div class="seismic-links">${mapEligible(r)?`<button type="button" data-family="${family}" data-report="${index}" ${!window.map?'disabled':''}>震源を地図で見る</button>`:''}<a href="${official[family]}" target="_blank" rel="noopener noreferrer">気象庁で最新情報を確認 ↗</a></div></article>`).join(''):`<p class="seismic-empty">取得した公開フィードの掲載範囲に、${family==='earthquake'?'震源・震度情報':'津波警報・注意報・予報'}はありません。${family==='tsunami'?'現在の津波警報の有無は、この表示だけでは判定できません。':''}</p>`;
+   list.innerHTML=items.length?items.map((r,index)=>`<article class="seismic-report"><div class="seismic-report-heading"><b>${esc(family==='earthquake'?(r.hypocenter||r.title):r.title)}</b><span class="seismic-label ${r.status!=='通常'?'exercise':''}">${esc(r.status||'状態不明')}・${esc(r.infoType||'種別不明')}</span></div><p class="seismic-time">発表：${esc(when(r.reportedAt))}<br>更新：${esc(when(r.updatedAt))}</p>${family==='earthquake'?`<p>発生：${esc(when(r.originTime))}<br>最大震度 <strong>${esc(intensity(r.maxIntensity))}</strong> ／ M${esc(r.magnitude&&Number.isFinite(Number(r.magnitude))?r.magnitude:'不明')}</p>`:''}${r.headline?`<p class="seismic-headline">${esc(r.headline)}</p>`:''}${r.areas?.length?`<details><summary>この発表の対象地域（${r.areas.length}区域）</summary><ul>${r.areas.map(a=>`<li>${esc(a.name)}：${esc(a.category||'種別不明')}${r.status==='通常'&&['発表','訂正'].includes(r.infoType)&&!r.cancelled?` <button class="coast-area-button" type="button" data-tsunami-report="${index}" data-tsunami-area="${esc(a.code)}" ${!window.map?'disabled':''}>沿岸を表示</button>`:''}</li>`).join('')}</ul></details>`:''}<div class="seismic-links">${family==='tsunami'&&r.status==='通常'&&['発表','訂正'].includes(r.infoType)&&!r.cancelled&&r.areas?.length?`<button type="button" data-tsunami-report="${index}" ${!window.map?'disabled':''}>この発表の対象沿岸を地図で見る</button>`:''}${mapEligible(r)?`<button type="button" data-family="${family}" data-report="${index}" ${!window.map?'disabled':''}>震源を地図で見る</button>`:''}<a href="${official[family]}" target="_blank" rel="noopener noreferrer">気象庁で最新情報を確認 ↗</a></div></article>`).join(''):`<p class="seismic-empty">取得した公開フィードの掲載範囲に、${family==='earthquake'?'震源・震度情報':'津波警報・注意報・予報'}はありません。${family==='tsunami'?'現在の津波警報の有無は、この表示だけでは判定できません。':''}</p>`;
   }
   document.querySelectorAll('[data-report]').forEach(el=>el.onclick=()=>focus(reports.filter(r=>r.family===el.dataset.family)[Number(el.dataset.report)]));draw();
  }
@@ -33,9 +34,9 @@
    if(!data.ok||!Array.isArray(data.reports)||!Number.isFinite(Date.parse(data.retrievedAt))||Date.now()-Date.parse(data.retrievedAt)>120000)throw Error();
    reports=data.reports;lastData=data;lastSuccess=Date.parse(data.retrievedAt);
    $('seismic-summary').textContent=`地震・津波の発表履歴：${when(data.retrievedAt)}取得${data.complete?'':' ／ 一部取得失敗・掲載漏れの可能性があります'}`;
-   $('seismic-status').className='seismic-statusbar'+(data.complete?'':' partial');render();
+   $('seismic-status').className='seismic-statusbar'+(data.complete?'':' partial');publish();render();
   }catch{
-   reports=[];lastSuccess=0;lastData=null;draw();$('seismic-status').className='seismic-statusbar failed';$('seismic-summary').textContent='地震・津波情報を取得できません。現在の状況は未確認です。気象庁の最新情報をご確認ください。';
+   reports=[];lastSuccess=0;lastData=null;publish();draw();$('seismic-status').className='seismic-statusbar failed';$('seismic-summary').textContent='地震・津波情報を取得できません。現在の状況は未確認です。気象庁の最新情報をご確認ください。';
    for(const family of ['earthquake','tsunami'])$(family+'-reports').innerHTML='<p class="seismic-empty">情報の取得に失敗しました。下の気象庁リンクで確認してください。</p>';
   }finally{busy=false;$('refresh-seismic').disabled=false;}
  }
@@ -43,6 +44,6 @@
  document.addEventListener('bousai:map-ready',()=>{if(lastData)render()});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
  setInterval(()=>{if(!document.hidden)refresh()},60000);
- setInterval(()=>{if(lastSuccess&&Date.now()-lastSuccess>120000){$('seismic-summary').textContent='地震・津波情報の取得から2分以上経過しています。掲載履歴は最新状態を保証しません。';$('seismic-status').className='seismic-statusbar partial';draw()}},30000);
+ setInterval(()=>{if(lastSuccess&&Date.now()-lastSuccess>120000){$('seismic-summary').textContent='地震・津波情報の取得から2分以上経過しています。掲載履歴は最新状態を保証しません。';$('seismic-status').className='seismic-statusbar partial';window.bousaiSeismicData=null;document.dispatchEvent(new Event('bousai:seismic-data'));draw()}},30000);
  refresh();
 })();
