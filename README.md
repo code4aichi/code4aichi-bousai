@@ -1,4 +1,4 @@
-# ミエル防災 v5.1
+# ミエル防災 v5.2
 
 災害時の水に焦点を当てた防災ポータル / Code for AICHI
 設置先：https://code4aichi.org/mieru-bosai/
@@ -40,3 +40,6 @@ public/locations.json と public/water-events.geojson は更新ZIPに含めな�
 
 ## v5.1のURL確認
 名古屋市・横浜市・札幌市の市全体の自治体トップ・防災・水道9URLを2026年10月25日に確認。元データを変えず表示時に補正します。反映手順は UPDATE-v5.1.md を参照。
+
+## v5.2のスマホ表示
+幅800px以下では補足の一覧・履歴・サイト説明等を折りたたみ、検索やページ内リンクに応じて展開します。反映手順は UPDATE-v5.2.md を参照。
