@@ -1,9 +1,23 @@
+import {buildFacilityMemo} from './facility-memo.mjs';
 import {createFacilityFavorites,FACILITY_SAVED_KEY} from './facility-favorites.mjs';
 import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from './facility-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null;
 let facilityStorage;try{facilityStorage=window.localStorage}catch{}
 const savedFacilities=createFacilityFavorites(facilityStorage);
+function downloadFacilityMemo(){
+ const status=$('facility-action-status');
+ if(!savedFacilities.reload()){status.textContent='保存した施設を読み込めません。ブラウザの保存設定をご確認ください。';return}
+ const saved=savedFacilities.entries();if(!saved.length){status.textContent='先に一覧から給水施設を保存してください。';return}
+ let url;
+ try{
+  const html=buildFacilityMemo(saved,facilities,{sources:Object.fromEntries(loadedSources.map(s=>[s.id,s.data.source||{}]))});
+  url=window.URL.createObjectURL(new window.Blob([html],{type:'text/html;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download='mieru-bosai-saved-facilities.html';link.click();
+  status.textContent=`保存した施設${saved.length}件のメモのダウンロードを開始しました。ファイルを開くと通信なしで閲覧・印刷できます。`;
+ }catch{status.textContent='メモを作成できませんでした。このブラウザのダウンロード設定をご確認ください。'}
+ finally{if(url)setTimeout(()=>window.URL.revokeObjectURL(url),1000)}
+}
 function toggleSavedFacility(id){
  const f=facilities.find(x=>x.id===id);if(!f)return;
  const result=savedFacilities.toggle(f);
@@ -83,6 +97,7 @@ function useSelectedRegion(){
  note.textContent=`${selection.name}の条件を設定しました。`;render();
  if(!filtered.length)note.textContent=`${selection.name}に一致する登録施設は今回の収録データにありません。施設がないことを意味しません。`;
 }
+$('facility-save-memo').onclick=downloadFacilityMemo;
 $('facility-only-saved').addEventListener('change',render);
 window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();if(loaded)render()}});
 $('facility-use-selection').onclick=useSelectedRegion;

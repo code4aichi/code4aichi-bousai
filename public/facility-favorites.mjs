@@ -16,6 +16,7 @@ export function createFacilityFavorites(storage){
  reload();
  return {
   has:f=>keys.has(identity(f)),count:()=>keys.size,available:()=>available,reload,
+  entries:()=>[...keys].map(k=>{const [provider,name,address,lat,lng]=JSON.parse(k);return {provider,name,address,lat,lng}}),
   toggle(f){
    if(!reload())return {ok:false,reason:'storage'};
    const key=identity(f),next=new Set(keys),saved=!next.has(key);
