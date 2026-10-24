@@ -49,3 +49,14 @@ export function facilitySelection(selection){
  }
  return null;
 }
+
+export function inFacilityBounds(f,bounds){
+ if(!bounds)return true;
+ const {south,north,west,east}=bounds;
+ if(![south,north,west,east,f.lat,f.lng].every(Number.isFinite)||south>north||east<west)return false;
+ if(f.lat<south||f.lat>north)return false;
+ if(east-west>=360)return true;
+ // Leaflet may report longitudes outside [-180,180] on a wrapped world.
+ const offset=((f.lng-west)%360+360)%360;
+ return offset<=east-west;
+}

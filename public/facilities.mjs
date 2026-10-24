@@ -1,6 +1,6 @@
-import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection} from './facility-model.mjs';
+import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from './facility-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30;
+let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null;
 const position=()=>{const p=window.bousaiCurrentPosition?.();return usablePosition(p)?p:null};
 const distance=n=>n==null?'':n<1?`約${Math.round(n*1000)}m`:`約${n.toFixed(1)}km`;
 function draw(){
@@ -23,7 +23,9 @@ function render(keepPage=false){
  if(keepPage!==true)visibleCount=30;
  if(!loaded)return;
  const p=position();if(nearest&&!p){nearest=false;$('facility-distance-note').textContent='現在地の取得から時間が経ちました。距離順で探す場合は、現在地を再取得してください。'}
- filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null});
+ filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null}).filter(f=>inFacilityBounds(f,searchBounds));
+ $('facility-bounds-clear').hidden=!searchBounds;
+ $('facility-bounds-note').textContent=searchBounds?'地図範囲の条件：ボタンを押した時点の範囲で絞り込み中です。地図を移動した場合は、もう一度「この地図範囲で探す」を押してください。ほかの検索条件も適用されます。':'';
  $('facility-count').textContent=`${filtered.length}件 / 登録給水施設${facilities.length}件`;
  if(nearest&&p)$('facility-distance-note').textContent=`現在地からの直線距離順（対象データ内）。${p.accuracy!=null?`位置精度の目安：約${p.accuracy.toLocaleString()}m。`:''}${filtered[0]?.distanceKm>20?'現在地の周辺を網羅するデータではありません。':''}距離は目安で、給水可否や安全な経路を示しません。`;
  const limit=visibleCount;
@@ -35,6 +37,7 @@ function render(keepPage=false){
 }
 function useCurrent(){
  if(!loaded)return;
+ searchBounds=null;render();
  if(position()){nearest=true;pending=false;clearTimeout(pendingTimer);render();return}
  pending=true;$('facility-distance-note').textContent='現在地を取得しています。ブラウザの位置情報の許可をご確認ください。';
  $('locate-me').click();clearTimeout(pendingTimer);pendingTimer=setTimeout(()=>{if(pending){pending=false;$('facility-distance-note').textContent='現在地を取得できませんでした。施設名や地域から検索できます。'}},15000);
@@ -52,7 +55,7 @@ function useSelectedRegion(){
  if(!loaded){note.textContent='登録給水施設データを取得できていません。取得状況と自治体の公式情報をご確認ください。';return}
  if(!target){note.textContent=`${selection.name}の給水施設データは未収録です。施設がないことを意味しません。地域の水道・断水情報から公式情報をご確認ください。`;return}
  if(!loadedSources.some(s=>s.id===target.provider)){note.textContent=`${selection.name}の提供元データを取得できていません。施設の所在・状況は未確認です。`;return}
- $('facility-provider').value=target.provider;refreshFilters();$('facility-region').value=target.region;
+ searchBounds=null;$('facility-provider').value=target.provider;refreshFilters();$('facility-region').value=target.region;
  $('facility-type').value='';$('facility-search').value=target.query;nearest=false;pending=false;clearTimeout(pendingTimer);
  $('facility-distance-note').textContent='選択した地域の登録施設です。開設・給水状況は未確認です。';
  note.textContent=`${selection.name}の条件を設定しました。`;render();
@@ -60,12 +63,19 @@ function useSelectedRegion(){
 }
 $('facility-use-selection').onclick=useSelectedRegion;
 document.addEventListener('bousai:selection',()=>{const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
+$('facility-use-bounds').onclick=()=>{
+ if(!loaded||!window.map?.getBounds){$('facility-bounds-note').textContent='地図または登録施設データを利用できません。施設名や地域から検索してください。';return}
+ const b=window.map.getBounds(),bounds={south:b.getSouth(),north:b.getNorth(),west:b.getWest(),east:b.getEast()};
+ if(!Object.values(bounds).every(Number.isFinite)||bounds.south>bounds.north||bounds.east<bounds.west){$('facility-bounds-note').textContent='地図範囲を取得できませんでした。地図を表示して再度お試しください。';return}
+ searchBounds=bounds;render();
+};
+$('facility-bounds-clear').onclick=()=>{searchBounds=null;render()};
 $('facility-more').onclick=()=>{visibleCount+=30;render(true);if($('facility-more').hidden)$('facility-count').focus()};
 $('facility-provider').addEventListener('change',()=>{refreshFilters();render()});
 $('show-facilities').onchange=draw;
 for(const id of ['facility-search','facility-region','facility-type'])$(id).addEventListener(id==='facility-search'?'input':'change',render);
 $('facility-use-current').onclick=useCurrent;
-$('facility-clear').onclick=()=>{$('facility-selection-note').textContent='';$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
+$('facility-clear').onclick=()=>{searchBounds=null;$('facility-selection-note').textContent='';$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
 $('facility-show-results').onclick=()=>{if(!loaded||!filtered.length||!window.map)return;$('show-facilities').checked=true;draw();window.map.fitBounds(L.latLngBounds(filtered.map(f=>[f.lat,f.lng])).pad(.06),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'})};
 document.addEventListener('bousai:position',()=>{if(pending){pending=false;clearTimeout(pendingTimer);nearest=true}render()});
 document.addEventListener('bousai:position-error',()=>{pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地を取得できませんでした。施設名・地域で検索できます。'});
