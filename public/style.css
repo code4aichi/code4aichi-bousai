@@ -76,3 +76,5 @@ button,a,input,select,summary{touch-action:manipulation}button:focus-visible,a:f
 .facility-source-item{display:block;margin:7px 0;line-height:1.8}.facility-card details{font-size:12px;line-height:1.8}
 
 .facility-detail{margin-top:8px;padding:8px 10px;border:1px solid #d9e6e9;border-radius:8px;background:#f7fbfa}.facility-detail summary{cursor:pointer;color:#17635c;min-height:28px}.facility-detail a{text-decoration:underline}.facility-original-notes{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.facility-saved-controls{margin-top:12px;padding:10px;border:1px solid #d9e6e9;border-radius:8px}.facility-saved-controls label{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px}.facility-saved-controls small{display:block;font-size:11px;color:#5b7482}.facility-card button[aria-pressed="true"]{background:#e2f2ee;font-weight:700}

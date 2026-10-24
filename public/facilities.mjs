@@ -1,6 +1,17 @@
+import {createFacilityFavorites,FACILITY_SAVED_KEY} from './facility-favorites.mjs';
 import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from './facility-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null;
+let facilityStorage;try{facilityStorage=window.localStorage}catch{}
+const savedFacilities=createFacilityFavorites(facilityStorage);
+function toggleSavedFacility(id){
+ const f=facilities.find(x=>x.id===id);if(!f)return;
+ const result=savedFacilities.toggle(f);
+ render(true);draw();
+ $('facility-action-status').textContent=result.ok?`${f.name}の保存を${result.saved?'完了':'解除'}しました。`:result.reason==='limit'?'保存できる施設は100件までです。不要な保存を解除してください。':'施設を保存できませんでした。ブラウザの保存設定や空き容量をご確認ください。';
+ const button=[...$('facility-list').querySelectorAll('[data-facility-save]')].find(b=>b.dataset.facilitySave===id);
+ if(button)button.focus();else $('facility-count').focus();
+}
 const position=()=>{const p=window.bousaiCurrentPosition?.();return usablePosition(p)?p:null};
 const distance=n=>n==null?'':n<1?`約${Math.round(n*1000)}m`:`約${n.toFixed(1)}km`;
 function draw(){
@@ -29,17 +40,20 @@ function render(keepPage=false){
  if(keepPage!==true){visibleCount=30;$('facility-action-status').textContent=''}
  if(!loaded)return;
  const p=position();if(nearest&&!p){nearest=false;$('facility-distance-note').textContent='現在地の取得から時間が経ちました。距離順で探す場合は、現在地を再取得してください。'}
- filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null}).filter(f=>inFacilityBounds(f,searchBounds));
+ filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null}).filter(f=>inFacilityBounds(f,searchBounds)&&(!$('facility-only-saved').checked||savedFacilities.has(f)));
+ const matchedSaved=facilities.filter(f=>savedFacilities.has(f)).length;
+ $('facility-saved-note').textContent=savedFacilities.available()?`保存${savedFacilities.count()}件（今回読み込んだデータで照合できた施設：${matchedSaved}件）。このブラウザ内に保存します。ほかの検索条件も適用されます。`:'保存した施設を読み込めません。ブラウザの保存設定をご確認ください。施設検索は引き続き利用できます。';
  $('facility-bounds-clear').hidden=!searchBounds;
  $('facility-bounds-note').textContent=searchBounds?'地図範囲の条件：ボタンを押した時点の範囲で絞り込み中です。地図を移動した場合は、もう一度「この地図範囲で探す」を押してください。ほかの検索条件も適用されます。':'';
  $('facility-count').textContent=`${filtered.length}件 / 登録給水施設${facilities.length}件`;
  if(nearest&&p)$('facility-distance-note').textContent=`現在地からの直線距離順（対象データ内）。${p.accuracy!=null?`位置精度の目安：約${p.accuracy.toLocaleString()}m。`:''}${filtered[0]?.distanceKm>20?'現在地の周辺を網羅するデータではありません。':''}距離は目安で、給水可否や安全な経路を示しません。`;
  const openDetails=new Set(keepPage===true?[...$('facility-list').querySelectorAll('details[open][data-detail-id]')].map(el=>el.dataset.detailId):[]);
  const limit=visibleCount;
- $('facility-list').innerHTML=filtered.length?filtered.slice(0,limit).map(f=>`<article class="facility-card"><div><b>${esc(f.name)}</b><span class="facility-distance">${esc(distance(f.distanceKm))}</span></div><p>${esc(f.type)} ／ ${esc(f.region)} ${esc(f.address)}</p><small>${esc(f.providerName)} ／ 開設状況未確認</small> <button type="button" data-facility-id="${esc(f.id)}" ${!window.map?'disabled':''}>地図で確認</button><details class="facility-detail" data-detail-id="${esc(f.id)}" ${openDetails.has(f.id)?'open':''}><summary>施設の詳細・公式の利用案内</summary><p><strong>住所：</strong>${esc(f.address||'住所情報なし')}<br><strong>地域：</strong>${esc(f.region)}</p>${f.notes?`<p class="facility-original-notes"><strong>公式データの備考：</strong><br>${esc(f.notes)}</p>`:'<p>元データに施設別の備考はありません。利用方法は公式ページでご確認ください。</p>'}<p>登録位置の緯度・経度：${esc(f.lat)}, ${esc(f.lng)}</p><p><a href="${esc(f.sourceURL)}" target="_blank" rel="noopener noreferrer">${esc(f.providerName)}の利用案内を確認 ↗</a></p><p class="facility-note">提供元の共通案内ページです。施設の開設・給水状況は未確認です。</p><button type="button" data-facility-copy="${esc(f.id)}">施設名・住所をコピー</button></details></article>`).join('')+(filtered.length>limit?`<p class="facility-note">先頭${limit}件を表示しています。続きは「さらに表示」から確認できます。</p>`:''):'<p class="facility-note">検索条件に合う登録施設はありません。周辺に給水施設がないことを意味しません。</p>';
+ $('facility-list').innerHTML=filtered.length?filtered.slice(0,limit).map(f=>`<article class="facility-card"><div><b>${esc(f.name)}</b><span class="facility-distance">${esc(distance(f.distanceKm))}</span></div><p>${esc(f.type)} ／ ${esc(f.region)} ${esc(f.address)}</p><small>${esc(f.providerName)} ／ 開設状況未確認</small> <button type="button" data-facility-id="${esc(f.id)}" ${!window.map?'disabled':''}>地図で確認</button> <button type="button" data-facility-save="${esc(f.id)}" aria-pressed="${savedFacilities.has(f)}">${savedFacilities.has(f)?'★ 保存済み（解除）':'☆ この施設を保存'}</button><details class="facility-detail" data-detail-id="${esc(f.id)}" ${openDetails.has(f.id)?'open':''}><summary>施設の詳細・公式の利用案内</summary><p><strong>住所：</strong>${esc(f.address||'住所情報なし')}<br><strong>地域：</strong>${esc(f.region)}</p>${f.notes?`<p class="facility-original-notes"><strong>公式データの備考：</strong><br>${esc(f.notes)}</p>`:'<p>元データに施設別の備考はありません。利用方法は公式ページでご確認ください。</p>'}<p>登録位置の緯度・経度：${esc(f.lat)}, ${esc(f.lng)}</p><p><a href="${esc(f.sourceURL)}" target="_blank" rel="noopener noreferrer">${esc(f.providerName)}の利用案内を確認 ↗</a></p><p class="facility-note">提供元の共通案内ページです。施設の開設・給水状況は未確認です。</p><button type="button" data-facility-copy="${esc(f.id)}">施設名・住所をコピー</button></details></article>`).join('')+(filtered.length>limit?`<p class="facility-note">先頭${limit}件を表示しています。続きは「さらに表示」から確認できます。</p>`:''):'<p class="facility-note">検索条件に合う登録施設はありません。周辺に給水施設がないことを意味しません。</p>';
  $('facility-more').hidden=filtered.length<=limit;
  $('facility-more').textContent=`さらに${Math.min(30,Math.max(0,filtered.length-limit))}件表示（残り${Math.max(0,filtered.length-limit)}件）`;
  $('facility-count').textContent+=` ／ 一覧表示${Math.min(limit,filtered.length)}件`;
+ $('facility-list').querySelectorAll('[data-facility-save]').forEach(b=>b.onclick=()=>toggleSavedFacility(b.dataset.facilitySave));
  $('facility-list').querySelectorAll('[data-facility-copy]').forEach(b=>b.onclick=()=>copyFacility(b.dataset.facilityCopy));
  $('facility-list').querySelectorAll('[data-facility-id]').forEach(b=>b.onclick=()=>focusFacility(b.dataset.facilityId));if(keepPage!==true)draw();
 }
@@ -69,6 +83,8 @@ function useSelectedRegion(){
  note.textContent=`${selection.name}の条件を設定しました。`;render();
  if(!filtered.length)note.textContent=`${selection.name}に一致する登録施設は今回の収録データにありません。施設がないことを意味しません。`;
 }
+$('facility-only-saved').addEventListener('change',render);
+window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();if(loaded)render()}});
 $('facility-use-selection').onclick=useSelectedRegion;
 document.addEventListener('bousai:selection',()=>{const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
 $('facility-use-bounds').onclick=()=>{
@@ -83,7 +99,7 @@ $('facility-provider').addEventListener('change',()=>{refreshFilters();render()}
 $('show-facilities').onchange=draw;
 for(const id of ['facility-search','facility-region','facility-type'])$(id).addEventListener(id==='facility-search'?'input':'change',render);
 $('facility-use-current').onclick=useCurrent;
-$('facility-clear').onclick=()=>{searchBounds=null;$('facility-selection-note').textContent='';$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
+$('facility-clear').onclick=()=>{searchBounds=null;$('facility-only-saved').checked=false;$('facility-selection-note').textContent='';$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
 $('facility-show-results').onclick=()=>{if(!loaded||!filtered.length||!window.map)return;$('show-facilities').checked=true;draw();window.map.fitBounds(L.latLngBounds(filtered.map(f=>[f.lat,f.lng])).pad(.06),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'})};
 document.addEventListener('bousai:position',()=>{if(pending){pending=false;clearTimeout(pendingTimer);nearest=true}render()});
 document.addEventListener('bousai:position-error',()=>{pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地を取得できませんでした。施設名・地域で検索できます。'});
