@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+function setup(){
+ const items=new Map(),events={};let notify;
+ const el=id=>{if(!items.has(id))items.set(id,{textContent:'取得完了',checked:true,dataset:{},classList:{contains:()=>false},querySelectorAll:()=>[],addEventListener:(event,fn)=>events[id+':'+event]=fn});return items.get(id)};
+ for(const id of ['show-planned-water','show-advisories'])el(id).checked=false;
+ const ctx=vm.createContext({MutationObserver:class{constructor(fn){notify=fn}observe(){}},document:{getElementById:el,addEventListener:(event,fn)=>events[event]=fn}});
+ vm.runInContext(fs.readFileSync(new URL('../public/compact-controls.js',import.meta.url),'utf8'),ctx);return {el,events,notify:()=>notify()};
+}
+test('fetch failures remain visible in the collapsed toolbar, and recover when fetch succeeds',()=>{
+ const h=setup();assert.equal(h.el('map-fetch-health').textContent,'取得済み');
+ h.el('water-summary').textContent='水の情報を取得できません。';h.notify();assert.equal(h.el('map-fetch-health').textContent,'取得失敗あり');
+ h.el('water-summary').textContent='水の情報を取得しました。';h.el('seismic-summary').textContent='一部取得失敗・掲載漏れの可能性があります';h.notify();assert.equal(h.el('map-fetch-health').dataset.state,'failed');
+ h.el('seismic-summary').textContent='一部未確認';h.notify();assert.equal(h.el('map-fetch-health').textContent,'一部未確認');
+});
+test('layer summary follows both checkbox changes and programmatic changes made by map buttons',()=>{
+ const h=setup();assert.equal(h.el('map-layer-summary').textContent,'水・警報・地震');
+ h.el('show-earthquakes').checked=false;h.events['show-earthquakes:change']();assert.equal(h.el('map-layer-summary').textContent,'水・警報');
+ h.el('show-planned-water').checked=true;h.events.click({target:{closest:()=>null}});assert.equal(h.el('map-layer-summary').textContent,'水・工事予定・警報');
+});
+test('saved-region count is visible while collapsed and selection closes the saved panel',()=>{
+ const h=setup();h.el('saved-regions-list').querySelectorAll=()=>[{},{}];h.notify();assert.equal(h.el('saved-regions-count').textContent,'2件');
+ h.el('saved-regions-panel').open=true;h.events.click({target:{closest:()=>({})}});assert.equal(h.el('saved-regions-panel').open,false);
+});
