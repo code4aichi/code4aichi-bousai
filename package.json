@@ -1,6 +1,6 @@
 {
   "name": "code4aichi-bousai-app",
-  "version": "4.3.1",
+  "version": "4.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.11.2"
   }
 }
