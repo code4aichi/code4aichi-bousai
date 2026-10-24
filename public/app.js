@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/[\s　]/g,'');
-let locations=[],map,group,selected=null,filtered=[],favorites,savedFocusId=null,linkRegistry=null; 
+let locations=[],map,group,selected=null,filtered=[],favorites,savedFocusId=null,linkRegistry=null,mapViewport=null; 
 function renderSaved(){
  const list=$('saved-regions-list');
  const saved=favorites.all();
@@ -53,12 +53,13 @@ function searchRegions(){
  update();
  if($('location-search').value.trim()||$('pref-filter').value)focusData();
 }
+function resetNationalMap(){if(map&&mapViewport)mapViewport.fitNation(map)}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
  $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
  renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
- $('location-search').addEventListener('input',searchRegions);$('pref-filter').addEventListener('change',searchRegions);$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();map?.setView([37.6,137.5],5)};
- $('reset-map').onclick=()=>{map?.setView([37.6,137.5],5)};
+ $('location-search').addEventListener('input',searchRegions);$('pref-filter').addEventListener('change',searchRegions);$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();resetNationalMap()};
+ $('reset-map').onclick=()=>{resetNationalMap()};
  $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
 }
@@ -70,7 +71,10 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  favorites=createFavorites(storage,locations);
  setupWithoutMap();
  if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
- map=L.map('map-canvas',{zoomControl:false,minZoom:4,zoomSnap:.5,scrollWheelZoom:false}).setView([37.6,137.5],5);
+ mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.2.2');
+ map=L.map('map-canvas',{zoomControl:false,minZoom:2,zoomSnap:.5,scrollWheelZoom:false}).setView([35,138],4);
+ mapViewport.fitNation(map);
+ mapViewport.observeMapSize(map,$('map-canvas'));
  L.control.zoom({position:'bottomright'}).addTo(map);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
  window.map=map;
