@@ -24,3 +24,5 @@ test('saved-region count is visible while collapsed and selection closes the sav
  const h=setup();h.el('saved-regions-list').querySelectorAll=()=>[{},{}];h.notify();assert.equal(h.el('saved-regions-count').textContent,'2件');
  h.el('saved-regions-panel').open=true;h.events.click({target:{closest:()=>({})}});assert.equal(h.el('saved-regions-panel').open,false);
 });
+
+test('successful facility data retrieval is distinct from unconfirmed facility opening status',()=>{const h=setup();h.el('facility-summary').textContent='登録データを取得しました。開設状況は未確認です。';h.el('facility-summary').dataset.fetchState='ok';h.notify();assert.equal(h.el('map-fetch-health').textContent,'取得済み');h.el('facility-summary').dataset.fetchState='partial';h.notify();assert.equal(h.el('map-fetch-health').textContent,'一部未確認')});
