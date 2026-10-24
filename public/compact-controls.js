@@ -7,8 +7,9 @@
   const enabled=[];
   if($('show-water').checked){enabled.push('水');if($('show-planned-water').checked)enabled.push('工事予定')}
   if($('show-alerts').checked){enabled.push('警報');if($('show-advisories').checked)enabled.push('注意報')}
+  if($('show-facilities')?.checked)enabled.push('登録施設');
   if($('show-earthquakes').checked)enabled.push('地震');write($('map-layer-summary'),enabled.length?enabled.join('・'):'地図の情報表示なし');
-  const statuses=[['water-summary',null],['alert-summary','alert-status'],['seismic-summary','seismic-status']].map(([id,parent])=>{
+  const statuses=[['water-summary',null],['alert-summary','alert-status'],['seismic-summary','seismic-status'],['facility-summary',null]].filter(([id])=>$(id)).map(([id,parent])=>{
    const text=$(id).textContent,box=parent?$(parent):null;
    if(box?.classList.contains('failed')||/取得できません|取得失敗|取得できず/.test(text))return 'failed';
    if(box?.classList.contains('partial')||/一部|経過|未確認/.test(text))return 'partial';
@@ -19,9 +20,9 @@
   const badge=$('map-fetch-health');write(badge,labels[state]);badge.dataset.state=state;
  }
  const observer=new MutationObserver(sync);
- for(const id of ['saved-regions-list','water-summary','alert-summary','seismic-summary'])observer.observe($(id),{childList:true,subtree:true,characterData:true});
+ for(const id of ['saved-regions-list','water-summary','alert-summary','seismic-summary','facility-summary'])if($(id))observer.observe($(id),{childList:true,subtree:true,characterData:true});
  for(const id of ['alert-status','seismic-status'])observer.observe($(id),{attributes:true,attributeFilter:['class']});
- for(const id of ['show-water','show-planned-water','show-alerts','show-advisories','show-earthquakes'])$(id).addEventListener('change',sync);
+ for(const id of ['show-water','show-planned-water','show-alerts','show-advisories','show-earthquakes','show-facilities'])$(id)?.addEventListener('change',sync);
  document.addEventListener('click',e=>{if(e.target.closest?.('#saved-regions-list .saved-region'))$('saved-regions-panel').open=false;sync()});
  sync();
 })();

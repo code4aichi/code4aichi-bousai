@@ -5,7 +5,7 @@ import vm from 'node:vm';
 function setup(){
  const items=new Map(),events={};let notify;
  const el=id=>{if(!items.has(id))items.set(id,{textContent:'取得完了',checked:true,dataset:{},classList:{contains:()=>false},querySelectorAll:()=>[],addEventListener:(event,fn)=>events[id+':'+event]=fn});return items.get(id)};
- for(const id of ['show-planned-water','show-advisories'])el(id).checked=false;
+ for(const id of ['show-planned-water','show-advisories','show-facilities'])el(id).checked=false;
  const ctx=vm.createContext({MutationObserver:class{constructor(fn){notify=fn}observe(){}},document:{getElementById:el,addEventListener:(event,fn)=>events[event]=fn}});
  vm.runInContext(fs.readFileSync(new URL('../public/compact-controls.js',import.meta.url),'utf8'),ctx);return {el,events,notify:()=>notify()};
 }

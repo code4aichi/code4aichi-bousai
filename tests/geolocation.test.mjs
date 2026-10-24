@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 function setup(){const button={disabled:false},status={textContent:''},calls=[],markers=[];let success,failure;
- const ctx=vm.createContext({window:{map:{stop(){},setView:(point,zoom)=>calls.push({point,zoom})}},navigator:{geolocation:{getCurrentPosition:(ok,err,options)=>{success=ok;failure=err;calls.push(options)}}},Number,Math,document:{getElementById:id=>id==='locate-me'?button:status,addEventListener(){}},L:{divIcon:x=>x,marker:(point,options)=>({addTo(){markers.push({point,options});return this},bindPopup(){},remove(){}}),circle:()=>({addTo(){return this},remove(){}})}});
+ const ctx=vm.createContext({window:{map:{stop(){},setView:(point,zoom)=>calls.push({point,zoom})}},navigator:{geolocation:{getCurrentPosition:(ok,err,options)=>{success=ok;failure=err;calls.push(options)}}},Number,Math,Date,Event,document:{getElementById:id=>id==='locate-me'?button:status,addEventListener(){},dispatchEvent(){}},L:{divIcon:x=>x,marker:(point,options)=>({addTo(){markers.push({point,options});return this},bindPopup(){},remove(){}}),circle:()=>({addTo(){return this},remove(){}})}});
  vm.runInContext(fs.readFileSync(new URL('../public/geolocation.js',import.meta.url),'utf8'),ctx);return {button,status,calls,markers,success:p=>success(p),failure:e=>failure(e)};
 }
 test('location permission is requested only after pressing the button',()=>{const h=setup();assert.equal(h.calls.length,0);h.button.onclick();assert.equal(h.calls.length,1);assert.equal(h.calls[0].maximumAge,0);assert.equal(h.button.disabled,true)});
