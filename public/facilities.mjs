@@ -19,8 +19,14 @@ function focusFacility(id){
  const marker=markers.get(id);if(marker){if(typeof group.zoomToShowLayer==='function')group.zoomToShowLayer(marker,()=>marker.openPopup());else marker.openPopup()}
  document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
+async function copyFacility(id){
+ const f=filtered.find(x=>x.id===id);if(!f)return;
+ const status=$('facility-action-status'),text=`${f.name}\n${f.address||f.region}`;
+ try{if(!window.navigator?.clipboard?.writeText)throw Error();await window.navigator.clipboard.writeText(text);status.textContent=`${f.name}の施設名・住所をコピーしました。`}
+ catch{status.textContent='コピーできませんでした。施設の住所を選択してコピーしてください。'}
+}
 function render(keepPage=false){
- if(keepPage!==true)visibleCount=30;
+ if(keepPage!==true){visibleCount=30;$('facility-action-status').textContent=''}
  if(!loaded)return;
  const p=position();if(nearest&&!p){nearest=false;$('facility-distance-note').textContent='現在地の取得から時間が経ちました。距離順で探す場合は、現在地を再取得してください。'}
  filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null}).filter(f=>inFacilityBounds(f,searchBounds));
@@ -28,11 +34,13 @@ function render(keepPage=false){
  $('facility-bounds-note').textContent=searchBounds?'地図範囲の条件：ボタンを押した時点の範囲で絞り込み中です。地図を移動した場合は、もう一度「この地図範囲で探す」を押してください。ほかの検索条件も適用されます。':'';
  $('facility-count').textContent=`${filtered.length}件 / 登録給水施設${facilities.length}件`;
  if(nearest&&p)$('facility-distance-note').textContent=`現在地からの直線距離順（対象データ内）。${p.accuracy!=null?`位置精度の目安：約${p.accuracy.toLocaleString()}m。`:''}${filtered[0]?.distanceKm>20?'現在地の周辺を網羅するデータではありません。':''}距離は目安で、給水可否や安全な経路を示しません。`;
+ const openDetails=new Set(keepPage===true?[...$('facility-list').querySelectorAll('details[open][data-detail-id]')].map(el=>el.dataset.detailId):[]);
  const limit=visibleCount;
- $('facility-list').innerHTML=filtered.length?filtered.slice(0,limit).map(f=>`<article class="facility-card"><div><b>${esc(f.name)}</b><span class="facility-distance">${esc(distance(f.distanceKm))}</span></div><p>${esc(f.type)} ／ ${esc(f.region)} ${esc(f.address)}</p><small>${esc(f.providerName)} ／ 開設状況未確認</small> <button type="button" data-facility-id="${esc(f.id)}" ${!window.map?'disabled':''}>地図で確認</button></article>`).join('')+(filtered.length>limit?`<p class="facility-note">先頭${limit}件を表示しています。続きは「さらに表示」から確認できます。</p>`:''):'<p class="facility-note">検索条件に合う登録施設はありません。周辺に給水施設がないことを意味しません。</p>';
+ $('facility-list').innerHTML=filtered.length?filtered.slice(0,limit).map(f=>`<article class="facility-card"><div><b>${esc(f.name)}</b><span class="facility-distance">${esc(distance(f.distanceKm))}</span></div><p>${esc(f.type)} ／ ${esc(f.region)} ${esc(f.address)}</p><small>${esc(f.providerName)} ／ 開設状況未確認</small> <button type="button" data-facility-id="${esc(f.id)}" ${!window.map?'disabled':''}>地図で確認</button><details class="facility-detail" data-detail-id="${esc(f.id)}" ${openDetails.has(f.id)?'open':''}><summary>施設の詳細・公式の利用案内</summary><p><strong>住所：</strong>${esc(f.address||'住所情報なし')}<br><strong>地域：</strong>${esc(f.region)}</p>${f.notes?`<p class="facility-original-notes"><strong>公式データの備考：</strong><br>${esc(f.notes)}</p>`:'<p>元データに施設別の備考はありません。利用方法は公式ページでご確認ください。</p>'}<p>登録位置の緯度・経度：${esc(f.lat)}, ${esc(f.lng)}</p><p><a href="${esc(f.sourceURL)}" target="_blank" rel="noopener noreferrer">${esc(f.providerName)}の利用案内を確認 ↗</a></p><p class="facility-note">提供元の共通案内ページです。施設の開設・給水状況は未確認です。</p><button type="button" data-facility-copy="${esc(f.id)}">施設名・住所をコピー</button></details></article>`).join('')+(filtered.length>limit?`<p class="facility-note">先頭${limit}件を表示しています。続きは「さらに表示」から確認できます。</p>`:''):'<p class="facility-note">検索条件に合う登録施設はありません。周辺に給水施設がないことを意味しません。</p>';
  $('facility-more').hidden=filtered.length<=limit;
  $('facility-more').textContent=`さらに${Math.min(30,Math.max(0,filtered.length-limit))}件表示（残り${Math.max(0,filtered.length-limit)}件）`;
  $('facility-count').textContent+=` ／ 一覧表示${Math.min(limit,filtered.length)}件`;
+ $('facility-list').querySelectorAll('[data-facility-copy]').forEach(b=>b.onclick=()=>copyFacility(b.dataset.facilityCopy));
  $('facility-list').querySelectorAll('[data-facility-id]').forEach(b=>b.onclick=()=>focusFacility(b.dataset.facilityId));if(keepPage!==true)draw();
 }
 function useCurrent(){
