@@ -1,8 +1,17 @@
-import {waterFeatures,verifiedWaterEvents,emergencyReferencePoints,waterReportView,waterReportSelection} from './water-model.mjs';
+import {waterFeatures,verifiedWaterEvents,emergencyReferencePoints,waterReportView,waterReportSelection,isFreshWaterData} from './water-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const date=s=>Number.isFinite(Date.parse(s))?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(s))+' JST':'不明';
-let data=null,layer=null,busy=false;
-const fresh=()=>data&&Date.now()-Date.parse(data.retrievedAt)<=600000;
+const date=s=>Number.isFinite(Date.parse(s))?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(s))+' JST':'不明';
+let data=null,layer=null,busy=false,lastRetrievedAt=null;
+const fresh=()=>isFreshWaterData(data);
+function syncWaterStatus(){
+ const state=busy?'loading':!data?'failed':!fresh()?'stale':data.complete?'ok':'partial';
+ const last=lastRetrievedAt?` 前回取得：${date(lastRetrievedAt)}。`:'';
+ const text=state==='loading'?`水の情報を確認しています…${last}`:state==='failed'?`水の情報を取得できません。断水の有無は未確認です。${last}`:state==='stale'?`水の情報の取得から10分以上経過しています。最新の状況は未確認です。${last}`:`水の情報：${date(data.retrievedAt)}取得${state==='partial'?' ／ 一部の情報を取得できないか、原文の確認が必要です':''}`;
+ for(const id of ['water-summary','water-panel-summary']){$(id).textContent=text;$(id).dataset.fetchState=state==='stale'?'partial':state}
+ const badge=$('water-panel-health');badge.dataset.state=state;badge.textContent=({loading:'更新中',failed:'取得失敗',stale:'要再確認',partial:'一部未確認',ok:'取得済み'})[state];
+ for(const id of ['refresh-water','refresh-water-panel'])$(id).disabled=busy;
+}
+
 function description(p){return p.kind==='emergency-reference'?'緊急欄に発表がある区の参考位置（実際の断水区域ではありません）':p.kind==='planned'?'工事予定のある区・市の参考位置（断水区域ではありません）':p.status==='restored'?'復旧の発表':Date.now()-Date.parse(p.checkedAt)>86400000?'最新の状態は要再確認':p.kind==='supply'?'給水の公式発表':'断水の公式発表'}
 function draw(){
  layer?.remove();layer=null;$('water-map-badge').hidden=true;
@@ -29,7 +38,7 @@ function render(){
  if(['yokohama','sapporo'].includes($('water-report-filter').value))$('water-provider-details').open=true;
  const counts=[view.showEmergency?`緊急欄の発表${view.emergencyReports.length}件`:null,view.showRegistered?`確認済み登録${data.verifiedEvents?verified.accepted.length+'件':'取得できず未確認'}`:null,view.showPlans?`工事予定${sourceOK?view.notices.length+'件':'取得できず未確認'}`:null].filter(Boolean);
  $('water-list-status').textContent=fresh()?`取得済みデータ内の表示件数：${counts.join('、')}。0件は断水がないことを意味しません。`:'取得から10分以上経過したデータです。最新の状況は未確認です。更新または公式原文でご確認ください。';
- $('water-summary').textContent=fresh()?`水の情報：${date(data.retrievedAt)}取得${data.complete?'':' ／ 一部の情報を取得できませんでした'}`:'水の情報の取得から10分以上経過しています。最新の状況は未確認です。';
+ syncWaterStatus();
  $('water-coverage').textContent=`災害・事故の断水／給水：確認済み登録 ${data.verifiedEvents?allVerified.accepted.length+'件':'未確認'}（全国未網羅）。名古屋市上下水道局の工事予定：${sourceOK?data.notices.length+'件':'取得できず未確認'}。${allVerified.rejected.length?'確認条件を満たさない登録は表示していません。':''}`;
  const providers=view.emergencySources,sourceList=$('emergency-water-sources'),emergencies=$('emergency-water-reports');
  if(sourceList){const stateLabels={'no-listing':'対象の掲載を確認できませんでした（断水なしを意味しません）',reports:'緊急欄に発表あり',review:'掲載内容・形式が変わり原文確認が必要',unavailable:'取得失敗・状況未確認'};
@@ -54,14 +63,16 @@ function render(){
  });draw();detail();
 }
 async function refresh(){
- if(busy)return;busy=true;$('refresh-water').disabled=true;$('water-summary').textContent='水の情報を確認しています…';
- try{const r=await fetch('/mieru-bosai/api/water',{cache:'no-store',signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error();const d=await r.json();if(!d.ok||!Array.isArray(d.notices)||!Number.isFinite(Date.parse(d.retrievedAt))||Date.now()-Date.parse(d.retrievedAt)>600000)throw Error();data=d;render()}
- catch{data=null;layer?.remove();layer=null;$('water-map-badge').hidden=true;$('water-summary').textContent='水の情報を取得できません。断水の有無は未確認です。';$('water-coverage').textContent='公式情報へのリンクからご確認ください。';$('water-list-status').textContent='水の情報を取得できません。断水の有無は未確認です。';$('water-report-list').replaceChildren();$('water-planned-list').textContent='取得できませんでした。';$('emergency-water-sources')?.replaceChildren();$('emergency-water-reports')?.replaceChildren();detail()}
- finally{busy=false;$('refresh-water').disabled=false}
+ if(busy)return;busy=true;syncWaterStatus();if(!fresh()){layer?.remove();layer=null;$('water-map-badge').hidden=true;}
+ try{const r=await fetch('/mieru-bosai/api/water',{cache:'no-store',signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error();const d=await r.json();if(!d.ok||!Array.isArray(d.notices)||!isFreshWaterData(d))throw Error();data=d;lastRetrievedAt=d.retrievedAt;render()}
+ catch{data=null;layer?.remove();layer=null;$('water-map-badge').hidden=true;$('water-coverage').textContent='公式情報へのリンクからご確認ください。';$('water-list-status').textContent='水の情報を取得できません。断水の有無は未確認です。';$('water-report-list').replaceChildren();$('water-planned-list').textContent='取得できませんでした。';$('emergency-water-sources')?.replaceChildren();$('emergency-water-reports')?.replaceChildren();detail()}
+ finally{busy=false;syncWaterStatus()}
 }
 $('water-report-filter').onchange=()=>{if(data)render();else $('water-list-status').textContent='水の情報を取得できていません。更新または公式情報をご確認ください。';$('water-selection-status').textContent=''};
 $('water-use-selection').onclick=()=>{const place=window.bousaiCurrentSelection?.(),key=waterReportSelection(place);if(!key){$('water-selection-status').textContent=place?`${place.name}に対応する先行連携はありません。地域の水道事業者の公式情報をご確認ください。`:'先に地図や地域一覧から自治体を選択してください。';return} $('water-report-filter').value=key;if(data)render();$('water-selection-status').textContent=data?`${place.name}に関連する連携元の情報を表示します。選択地域だけの被害判定ではありません。対象区域は公式原文でご確認ください。`:'連携元を設定しましたが、水の情報を取得できていません。更新または公式情報をご確認ください。';};
-$('show-water').onchange=draw;$('show-planned-water').onchange=draw;$('refresh-water').onclick=refresh;
+$('show-water').onchange=draw;$('show-planned-water').onchange=draw;$('refresh-water').onclick=refresh;$('refresh-water-panel').onclick=refresh;
 document.addEventListener('bousai:map-ready',()=>{if(data)render()});document.addEventListener('bousai:selection',detail);
-setInterval(()=>{if(!document.hidden)refresh()},300000);setInterval(()=>{if(data&&!fresh()){layer?.remove();layer=null;$('water-map-badge').hidden=true;$('water-summary').textContent='水の情報の取得から10分以上経過しています。最新の状況は未確認です。';$('water-list-status').textContent='取得から10分以上経過したデータです。最新の状況は未確認です。';detail()}},60000);
+setInterval(()=>{if(!document.hidden)refresh()},300000);setInterval(()=>{if(data&&!fresh()){layer?.remove();layer=null;$('water-map-badge').hidden=true;syncWaterStatus();$('water-list-status').textContent='取得から10分以上経過したデータです。最新の状況は未確認です。';detail()}},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!fresh())refresh()});
+window.addEventListener?.('online',()=>{if(!fresh())refresh()});
 refresh();

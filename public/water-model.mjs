@@ -1,4 +1,8 @@
 const official=s=>{try{const u=new URL(s);return u.protocol==='https:'&&(/\.(lg|go)\.jp$/.test(u.hostname)||u.hostname==='www.water.city.nagoya.jp')}catch{return false}};
+export function isFreshWaterData(data,now=Date.now()){
+ const elapsed=now-Date.parse(data?.retrievedAt);
+ return Number.isFinite(elapsed)&&elapsed>=-60000&&elapsed<=600000;
+}
 function geometry(g){
  if(g?.type==='Point')return g.coordinates?.length>=2&&Number.isFinite(g.coordinates[0])&&Number.isFinite(g.coordinates[1])&&Math.abs(g.coordinates[0])<=180&&Math.abs(g.coordinates[1])<=90;
  const ring=r=>Array.isArray(r)&&r.length>=4&&r.every(p=>geometry({type:'Point',coordinates:p}))&&r[0][0]===r.at(-1)[0]&&r[0][1]===r.at(-1)[1];
