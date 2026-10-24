@@ -13,8 +13,18 @@ export function verifiedWaterEvents(collection){
  }
  return {accepted,rejected};
 }
+const regionName=s=>String(s??'').normalize('NFKC').replace(/\s+/g,'');
+export function emergencyReferencePoints(report,locations){
+ const points=new Map();
+ for(const name of report.referenceNames||[]){const matches=locations.filter(p=>p.prefecture===report.referencePrefecture&&regionName(p.name)===regionName(name));if(matches.length===1){const p=matches[0];points.set(p.id||p.prefecture+'|'+p.name,p)}}
+ return [...points.values()];
+}
 export function waterFeatures(data,locations,planned=false){
  const verified=verifiedWaterEvents(data.verifiedEvents);const features=[...verified.accepted];
+ for(const report of data.emergencyReports||[]){
+  const refs=emergencyReferencePoints(report,locations);
+  for(const p of refs)features.push({type:'Feature',geometry:{type:'Point',coordinates:[p.lng,p.lat]},properties:{kind:'emergency-reference',title:p.name+'の緊急発表（参考位置）',locationPrecision:'municipal-reference',report}});
+ }
  if(planned){const groups=new Map();for(const n of data.notices||[]){const matches=locations.filter(p=>p.name===n.referenceName&&p.prefecture===n.referencePrefecture);if(matches.length!==1)continue;const p=matches[0],key=p.id;let feature=groups.get(key);
   if(!feature){feature={type:'Feature',geometry:{type:'Point',coordinates:[p.lng,p.lat]},properties:{kind:'planned',title:p.name+'の工事予定',locationPrecision:'municipal-reference',notices:[]}};groups.set(key,feature)}feature.properties.notices.push(n);
  }features.push(...groups.values())}

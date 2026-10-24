@@ -1,3 +1,4 @@
+import {emergencyWaterSources} from './emergency-water.js';
 const BASE='https://www.water.city.nagoya.jp/subsys/cutoff/';
 const strip=s=>String(s).replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\s+/g,' ').trim();
 export function nagoyaDates(now=new Date()){
@@ -24,10 +25,12 @@ export function parseNagoya(html,date){
  if(!notices.length&&!block.includes('断水工事の予定はありません。'))throw Error('Unrecognized empty page');return notices;
 }
 export async function waterData(request,env){
+ const emergencyPromise=emergencyWaterSources();
  const dates=nagoyaDates(),sources=await Promise.all(dates.map(async date=>{const url=BASE+'?HIDUKE='+encodeURIComponent(date);try{
   const r=await fetch(url,{signal:AbortSignal.timeout(8000),cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)throw Error();return {ok:true,date,url,notices:parseNagoya(await r.text(),date)};
  }catch{return {ok:false,date,url,notices:[]}}}));
  let verifiedEvents=null;
  try{const url=new URL('/water-events.geojson',request.url);const r=await env.ASSETS.fetch(new Request(url));if(!r.ok)throw Error();verifiedEvents=await r.json();if(verifiedEvents.type!=='FeatureCollection'||!Array.isArray(verifiedEvents.features))throw Error()}catch{verifiedEvents=null}
- return {ok:true,retrievedAt:new Date().toISOString(),sources:sources.map(({ok,date,url})=>({ok,date,url})),complete:sources.every(s=>s.ok)&&!!verifiedEvents,notices:sources.flatMap(s=>s.notices),verifiedEvents,coverage:'名古屋市上下水道局の本日から3日間の工事予定。災害・事故による断水の全国自動取得には未対応です。'};
+ const emergencySources=await emergencyPromise;
+ return {ok:true,emergencySources,emergencyReports:emergencySources.flatMap(s=>s.reports),retrievedAt:new Date().toISOString(),sources:sources.map(({ok,date,url})=>({ok,date,url})),complete:sources.every(s=>s.ok)&&!!verifiedEvents&&emergencySources.every(s=>s.ok&&s.state!=='review'),notices:sources.flatMap(s=>s.notices),verifiedEvents,coverage:'名古屋市上下水道局の本日から3日間の工事予定。緊急情報は横浜市・札幌市を先行確認。災害・事故による断水の全国自動取得には未対応です。'};
 }
