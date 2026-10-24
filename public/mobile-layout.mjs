@@ -16,7 +16,7 @@ export function initMobileLayout(doc=document,win=window){
  function layout(){
   sections.forEach(el=>el.open=!media.matches);
   const providers=doc.getElementById('water-provider-details');if(providers)providers.open=!media.matches||['yokohama','sapporo'].includes(doc.getElementById('water-report-filter')?.value);
-  revealHash();sync();win.map?.invalidateSize({pan:false});
+  revealHash();sync();
  }
  for(const id of ['location-search','pref-filter'])doc.getElementById(id)?.addEventListener(id==='location-search'?'input':'change',()=>{if(media.matches&&region)region.open=true});
  win.addEventListener('hashchange',revealHash);media.addEventListener('change',layout);

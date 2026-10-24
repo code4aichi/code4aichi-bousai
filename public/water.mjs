@@ -15,11 +15,11 @@ function syncWaterStatus(){
 function description(p){return p.kind==='emergency-reference'?'緊急欄に発表がある区の参考位置（実際の断水区域ではありません）':p.kind==='planned'?'工事予定のある区・市の参考位置（断水区域ではありません）':p.status==='restored'?'復旧の発表':Date.now()-Date.parse(p.checkedAt)>86400000?'最新の状態は要再確認':p.kind==='supply'?'給水の公式発表':'断水の公式発表'}
 function draw(){
  layer?.remove();layer=null;$('water-map-badge').hidden=true;
- if(!fresh()||!$('show-water').checked||!window.map||typeof L==='undefined')return;
+ if(!fresh()||!$('show-water').checked||!window.bousaiMap||typeof L==='undefined')return;
  const features=waterFeatures(data,window.bousaiLocations?.()||[],$('show-planned-water').checked);
  layer=L.geoJSON(features,{style:f=>({color:f.properties.status==='restored'?'#697780':f.properties.kind==='supply'?'#007e77':'#b73e36',weight:3,fillOpacity:.18}),pointToLayer:(f,latlng)=>L.marker(latlng,{title:f.properties.title,icon:L.divIcon({className:'water-report-marker '+(f.properties.kind==='planned'?'planned':f.properties.status==='restored'?'restored':f.properties.kind),html:`<span aria-hidden="true">${f.properties.kind==='planned'?'予':f.properties.kind==='supply'?'給':f.properties.kind==='emergency-reference'?'報':'水'}</span>`,iconSize:[30,30],iconAnchor:[15,15]})}),onEachFeature(f,l){
   const p=f.properties;l.bindPopup(`<b>${esc(p.title)}</b><p>${esc(description(p))}</p>${p.kind==='planned'?p.notices.map(n=>`<p>${esc(n.area)}<br>${esc(n.timeText)}<br><a href="${esc(n.sourceURL)}" target="_blank" rel="noopener noreferrer">公式の断水区域・予定を確認 ↗</a></p>`).join(''):p.kind==='emergency-reference'?`<p>${esc(p.report.headline)}</p><p>${esc(p.report.areaNames.join('、'))}</p><a href="${esc(p.report.sourceURL)}" target="_blank" rel="noopener noreferrer">対象区域・発表時刻を公式原文で確認 ↗</a>`:`<p>発表：${esc(date(p.issuedAt))}<br>確認：${esc(date(p.checkedAt))}</p><a href="${esc(p.sourceURL)}" target="_blank" rel="noopener noreferrer">公式発表を確認 ↗</a>`}`);
- }}).addTo(window.map);
+ }}).addTo(window.bousaiMap);
  if(features.features.length){$('water-map-badge').hidden=false;$('water-map-badge').textContent=$('show-planned-water').checked?'水の情報を表示中。「予」は工事予定の区・市の参考位置です。':'水の情報：「報」は緊急欄の発表がある区の参考位置です。断水区域は公式原文で確認してください。'}
 }
 function detail(){
@@ -50,17 +50,17 @@ function render(){
  if(emergencies&&!emergencies.innerHTML)emergencies.innerHTML='<p>連携した緊急欄に表示できる発表はありません。断水の有無は、以下の公式ページの確認状況と原文をご確認ください。</p>';
  if(data.emergencySources?.length)$('water-coverage').textContent+=` 緊急情報の先行確認：${data.emergencySources.filter(p=>p.ok).length}/${data.emergencySources.length}ページ取得（横浜・札幌、掲載範囲限定）。`;
  document.querySelectorAll('[data-emergency-reference]').forEach(b=>b.onclick=()=>{
-  const report=emergencyReports[Number(b.dataset.emergencyReference)],points=emergencyReferencePoints(report,window.bousaiLocations?.()||[]);if(!points.length||!window.map)return;
-  $('show-water').checked=true;draw();window.map.stop();window.map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])).pad(.1),{maxZoom:12,animate:false});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
+  const report=emergencyReports[Number(b.dataset.emergencyReference)],points=emergencyReferencePoints(report,window.bousaiLocations?.()||[]);if(!points.length||!window.bousaiMap)return;
+  $('show-water').checked=true;draw();window.bousaiMap.stop();window.bousaiMap.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])).pad(.1),{maxZoom:12,animate:false});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
  });
  list.innerHTML=verified.accepted.map((f,i)=>{const p=f.properties;return `<article class="water-card"><b>${esc(p.title)}</b><p>${esc(description(p))}<br>発表：${esc(date(p.issuedAt))} ／ 確認：${esc(date(p.checkedAt))}</p><button type="button" data-water-event="${i}">対象位置・区域を見る</button> <a href="${esc(p.sourceURL)}" target="_blank" rel="noopener noreferrer">公式発表 ↗</a></article>`}).join('')||(data.verifiedEvents?'<p>表示条件を満たす確認済み登録はありません。全国の断水の有無は未確認です。</p>':'<p>確認済み登録データを取得できず、状況は未確認です。</p>');
  const plans=$('water-planned-list');plans.innerHTML=!sourceOK?'<p>工事予定情報を取得できませんでした。公式ページをご確認ください。</p>':view.notices.length?view.notices.map((n,i)=>`<article class="water-card"><span class="water-kind">工事予定</span><b>${esc(n.area)}</b><p>${esc(n.timeText)}</p>${n.referenceName?`<button type="button" data-water-notice="${i}">区・市の参考位置を見る</button>`:''} <a href="${esc(n.sourceURL)}" target="_blank" rel="noopener noreferrer">公式の断水区域・予定 ↗</a></article>`).join(''):'<p>取得した範囲に工事予定は掲載されていません。災害・事故による断水の有無を示すものではありません。</p>';
  document.querySelectorAll('[data-water-notice]').forEach(b=>b.onclick=()=>{
-  const n=view.notices[Number(b.dataset.waterNotice)],points=(window.bousaiLocations?.()||[]).filter(p=>p.name===n.referenceName&&p.prefecture===n.referencePrefecture);if(points.length!==1||!window.map)return;
-  $('show-water').checked=true;$('show-planned-water').checked=true;draw();window.map.stop();window.map.setView([points[0].lat,points[0].lng],12,{animate:false});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
+  const n=view.notices[Number(b.dataset.waterNotice)],points=(window.bousaiLocations?.()||[]).filter(p=>p.name===n.referenceName&&p.prefecture===n.referencePrefecture);if(points.length!==1||!window.bousaiMap)return;
+  $('show-water').checked=true;$('show-planned-water').checked=true;draw();window.bousaiMap.stop();window.bousaiMap.setView([points[0].lat,points[0].lng],12,{animate:false});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
  });
  document.querySelectorAll('[data-water-event]').forEach(b=>b.onclick=()=>{
-  if(!window.map)return;const f=verified.accepted[Number(b.dataset.waterEvent)];$('show-water').checked=true;draw();const bounds=L.geoJSON(f).getBounds();if(bounds.isValid())window.map.fitBounds(bounds.pad(.1),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
+  if(!window.bousaiMap)return;const f=verified.accepted[Number(b.dataset.waterEvent)];$('show-water').checked=true;draw();const bounds=L.geoJSON(f).getBounds();if(bounds.isValid())window.bousaiMap.fitBounds(bounds.pad(.1),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
  });draw();detail();
 }
 async function refresh(){

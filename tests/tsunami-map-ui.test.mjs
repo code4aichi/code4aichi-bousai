@@ -9,7 +9,7 @@ function harness(fetcher=async()=>Response.json(coasts)){
  const elements=new Map(),listeners={},layers=[];
  const el=id=>{if(!elements.has(id))elements.set(id,{hidden:true,textContent:'',scrollIntoView(){}});return elements.get(id)};
  const map={getPane:()=>({}),stop(){},invalidateSize(){},fitBounds(){}};
- const window={map,bousaiSeismicData:{retrievedAt:new Date().toISOString(),reports:[r]}};
+ const window={map:{tagName:"SECTION"},bousaiMap:map,bousaiSeismicData:{retrievedAt:new Date().toISOString(),reports:[r]}};
  const context=vm.createContext({window,coastEligible,buildCoastOverlay,validateCoasts,Map,Date,Intl,String,Array,Number,fetch:fetcher,L:{geoJSON(data){const layer={data,removed:false,addTo(){layers.push(this);return this},remove(){this.removed=true},getBounds(){return {isValid:()=>true,pad(){return this}}}};return layer}},document:{getElementById:el,addEventListener:(name,fn)=>listeners[name]=fn}});
  const source=fs.readFileSync(new URL('../public/tsunami-map.mjs',import.meta.url),'utf8').replace(/^import .*\n/,'');vm.runInContext(source,context);
  const click=area=>listeners.click({target:{closest:()=>({dataset:{tsunamiReport:'0',tsunamiArea:area}})}});

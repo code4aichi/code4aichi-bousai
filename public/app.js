@@ -53,7 +53,7 @@ function searchRegions(){
  update();
  if($('location-search').value.trim()||$('pref-filter').value)focusData();
 }
-function resetNationalMap(){if(map&&mapViewport)mapViewport.fitNation(map)}
+function resetNationalMap(){if(map&&mapViewport)mapViewport.fitNation(map,matchMedia('(max-width: 800px)').matches)}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
  $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
@@ -71,14 +71,14 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  favorites=createFavorites(storage,locations);
  setupWithoutMap();
  if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
- mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.2.2');
- map=L.map('map-canvas',{zoomControl:false,minZoom:2,zoomSnap:.5,scrollWheelZoom:false}).setView([35,138],4);
- mapViewport.fitNation(map);
+ mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.2.3');
+ map=L.map('map-canvas',{zoomControl:false,minZoom:2,zoomSnap:.5,scrollWheelZoom:false}).setView([37.6,137.5],5);
+ mapViewport.fitNation(map,matchMedia('(max-width: 800px)').matches);
  mapViewport.observeMapSize(map,$('map-canvas'));
  L.control.zoom({position:'bottomright'}).addTo(map);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
- window.map=map;
+ window.bousaiMap=map;
  group=typeof L.markerClusterGroup==='function'?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:55,showCoverageOnHover:false}):L.layerGroup();group.addTo(map);
- update();document.dispatchEvent(new Event('bousai:map-ready'));setTimeout(()=>map.invalidateSize(),150);window.addEventListener('hashchange',()=>setTimeout(()=>map.invalidateSize(),200));
+ update();document.dispatchEvent(new Event('bousai:map-ready'));
 }
 boot();

@@ -8,7 +8,7 @@ function ui(mobile=true,hash=''){
  for(const id of ids)fields.set(id,{id,tagName:id.startsWith('mobile-')&&!id.endsWith('health')&&!id.endsWith('count')||id==='water-provider-details'?'DETAILS':'DIV',open:true,hidden:false,textContent:'',value:'',dataset:{},events:{},parentElement:null,classList:{contains:()=>false},addEventListener(e,fn){this.events[e]=fn},scrollIntoView(){this.scrolled=true}});
  el('result-count').textContent='1,916件';el('seismic-summary').textContent='地震・津波の発表履歴を確認しています…';el('concept').parentElement=el('mobile-site-info');
  const media={matches:mobile,addEventListener:(e,fn)=>mediaChange=fn};
- const win={matchMedia:()=>media,location:{hash},addEventListener:(e,fn)=>events[e]=fn,MutationObserver:class{constructor(fn){notify=fn}observe(){}}};
+ const win={map:{tagName:'SECTION'},matchMedia:()=>media,location:{hash},addEventListener:(e,fn)=>events[e]=fn,MutationObserver:class{constructor(fn){notify=fn}observe(){}}};
  initMobileLayout({getElementById:el},win);
  return {el,events,win,notify:()=>notify(),resize:value=>{media.matches=value;mediaChange()}};
 }

@@ -136,3 +136,9 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .stock-results{grid-template-columns:repeat(2,minmax(0,1fr))}
  .stock-results>div{min-width:0;overflow-wrap:anywhere}
 }
+
+/* Details has an anonymous content box: percentage height does not reach the list. */
+@media(min-width:801px){
+ .mobile-region-list #region-browser{height:618px;display:flex;flex-direction:column;min-height:0}
+ .mobile-region-list .v2-list{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto}
+}
