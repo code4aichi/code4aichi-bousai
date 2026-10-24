@@ -33,3 +33,19 @@ export function filterFacilities(facilities,{query='',region='',type='',provider
  const list=facilities.filter(f=>(!provider||f.provider===provider)&&(!region||f.region===region)&&(!type||f.type===type)&&(!q||normal([f.name,f.kana,f.region,f.address].join(' ')).includes(q))).map(f=>({...f,distanceKm:position?distanceKm(position,f):null}));
  if(position)list.sort((a,b)=>a.distanceKm-b.distanceKm||a.id.localeCompare(b.id));return list;
 }
+
+// Exact municipality identity only; never infer water-service territory.
+export function facilitySelection(selection){
+ const name=normal(selection?.name),pref=normal(selection?.prefecture).replace(/県$/,'');
+ if(pref==='愛知'){
+  if(name==='名古屋市')return {provider:'nagoya',query:'名古屋市',region:''};
+  if(/^名古屋市.+区$/.test(name))return {provider:'nagoya',query:'',region:name};
+  if(['清須市','あま市'].includes(name))return {provider:'nagoya',query:'',region:name};
+  if(['大治町','海部郡大治町'].includes(name))return {provider:'nagoya',query:'',region:'海部郡大治町'};
+ }
+ if(pref==='神奈川'){
+  if(name==='横浜市')return {provider:'yokohama',query:'',region:''};
+  if(/^横浜市.+区$/.test(name))return {provider:'yokohama',query:'',region:name};
+ }
+ return null;
+}

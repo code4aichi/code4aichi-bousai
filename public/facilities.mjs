@@ -1,4 +1,4 @@
-import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition} from './facility-model.mjs';
+import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection} from './facility-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[];
 const position=()=>{const p=window.bousaiCurrentPosition?.();return usablePosition(p)?p:null};
@@ -42,11 +42,25 @@ function refreshFilters(){
   for(const value of values){const option=document.createElement('option');option.value=value;option.textContent=value;$(id).append(option)}$(id).value=values.includes(before)?before:'';
  }
 }
+function useSelectedRegion(){
+ const selection=window.bousaiCurrentSelection?.(),target=facilitySelection(selection),note=$('facility-selection-note');
+ if(!selection){note.textContent='先に地図や地域一覧から自治体を選択してください。';return}
+ if(!loaded){note.textContent='登録給水施設データを取得できていません。取得状況と自治体の公式情報をご確認ください。';return}
+ if(!target){note.textContent=`${selection.name}の給水施設データは未収録です。施設がないことを意味しません。地域の水道・断水情報から公式情報をご確認ください。`;return}
+ if(!loadedSources.some(s=>s.id===target.provider)){note.textContent=`${selection.name}の提供元データを取得できていません。施設の所在・状況は未確認です。`;return}
+ $('facility-provider').value=target.provider;refreshFilters();$('facility-region').value=target.region;
+ $('facility-type').value='';$('facility-search').value=target.query;nearest=false;pending=false;clearTimeout(pendingTimer);
+ $('facility-distance-note').textContent='選択した地域の登録施設です。開設・給水状況は未確認です。';
+ note.textContent=`${selection.name}の条件を設定しました。`;render();
+ if(!filtered.length)note.textContent=`${selection.name}に一致する登録施設は今回の収録データにありません。施設がないことを意味しません。`;
+}
+$('facility-use-selection').onclick=useSelectedRegion;
+document.addEventListener('bousai:selection',()=>{const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
 $('facility-provider').addEventListener('change',()=>{refreshFilters();render()});
 $('show-facilities').onchange=draw;
 for(const id of ['facility-search','facility-region','facility-type'])$(id).addEventListener(id==='facility-search'?'input':'change',render);
 $('facility-use-current').onclick=useCurrent;
-$('facility-clear').onclick=()=>{$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
+$('facility-clear').onclick=()=>{$('facility-selection-note').textContent='';$('facility-search').value='';$('facility-provider').value='';refreshFilters();$('facility-region').value='';$('facility-type').value='';nearest=false;pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地から探すと、登録データ内を直線距離順で並べます。';render()};
 $('facility-show-results').onclick=()=>{if(!loaded||!filtered.length||!window.map)return;$('show-facilities').checked=true;draw();window.map.fitBounds(L.latLngBounds(filtered.map(f=>[f.lat,f.lng])).pad(.06),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'})};
 document.addEventListener('bousai:position',()=>{if(pending){pending=false;clearTimeout(pendingTimer);nearest=true}render()});
 document.addEventListener('bousai:position-error',()=>{pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地を取得できませんでした。施設名・地域で検索できます。'});
