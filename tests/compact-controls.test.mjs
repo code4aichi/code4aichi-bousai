@@ -10,7 +10,7 @@ function setup(){
  vm.runInContext(fs.readFileSync(new URL('../public/compact-controls.js',import.meta.url),'utf8'),ctx);return {el,events,notify:()=>notify()};
 }
 test('fetch failures remain visible in the collapsed toolbar, and recover when fetch succeeds',()=>{
- const h=setup();assert.equal(h.el('map-fetch-health').textContent,'取得済み');
+ const h=setup();assert.equal(h.el('map-fetch-health').textContent,'データ取得済み');
  h.el('water-summary').textContent='水の情報を取得できません。';h.notify();assert.equal(h.el('map-fetch-health').textContent,'取得失敗あり');
  h.el('water-summary').textContent='水の情報を取得しました。';h.el('seismic-summary').textContent='一部取得失敗・掲載漏れの可能性があります';h.notify();assert.equal(h.el('map-fetch-health').dataset.state,'failed');
  h.el('seismic-summary').textContent='一部未確認';h.notify();assert.equal(h.el('map-fetch-health').textContent,'一部未確認');
@@ -25,4 +25,4 @@ test('saved-region count is visible while collapsed and selection closes the sav
  h.el('saved-regions-panel').open=true;h.events.click({target:{closest:()=>({})}});assert.equal(h.el('saved-regions-panel').open,false);
 });
 
-test('successful facility data retrieval is distinct from unconfirmed facility opening status',()=>{const h=setup();h.el('facility-summary').textContent='登録データを取得しました。開設状況は未確認です。';h.el('facility-summary').dataset.fetchState='ok';h.notify();assert.equal(h.el('map-fetch-health').textContent,'取得済み');h.el('facility-summary').dataset.fetchState='partial';h.notify();assert.equal(h.el('map-fetch-health').textContent,'一部未確認')});
+test('successful facility data retrieval is distinct from unconfirmed facility opening status',()=>{const h=setup();h.el('facility-summary').textContent='登録データを取得しました。開設状況は未確認です。';h.el('facility-summary').dataset.fetchState='ok';h.notify();assert.equal(h.el('map-fetch-health').textContent,'データ取得済み');h.el('facility-summary').dataset.fetchState='partial';h.notify();assert.equal(h.el('map-fetch-health').textContent,'一部未確認')});

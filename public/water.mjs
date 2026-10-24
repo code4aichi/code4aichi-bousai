@@ -33,7 +33,7 @@ function detail(){
 }
 function render(){
  const allVerified=verifiedWaterEvents(data.verifiedEvents),view=waterReportView(data,$('water-report-filter').value),verified=verifiedWaterEvents(view.verifiedEvents),list=$('water-report-list'),sourceOK=data.sources?.some(s=>s.ok);
- $('water-emergency-section').hidden=!view.showEmergency;$('water-registered-section').hidden=!view.showRegistered;$('water-planned-section').hidden=!view.showPlans;
+ $('water-emergency-section').hidden=!view.showEmergency;$('water-registered-section').hidden=!view.showRegistered;if($('water-report-filter').value==='registered')$('water-registered-section').open=true;$('water-planned-section').hidden=!view.showPlans;
  if($('water-report-filter').value==='nagoya')$('water-planned-details').open=true;
  if(['yokohama','sapporo'].includes($('water-report-filter').value))$('water-provider-details').open=true;
  const counts=[view.showEmergency?`緊急欄の発表${view.emergencyReports.length}件`:null,view.showRegistered?`確認済み登録${data.verifiedEvents?verified.accepted.length+'件':'取得できず未確認'}`:null,view.showPlans?`工事予定${sourceOK?view.notices.length+'件':'取得できず未確認'}`:null].filter(Boolean);
@@ -46,6 +46,7 @@ function render(){
  const emergencyReports=view.emergencyReports;
  if(emergencies)emergencies.innerHTML=emergencyReports.map((r,i)=>`<article class="water-card"><span class="water-kind emergency">緊急欄の発表</span><b>${esc(r.sourceName)}</b><p>${esc(r.headline)}</p><p>対象：${esc(r.areaNames.join('、'))}</p><p>発表時刻は原文で確認してください。地図の目印は区の参考位置です。</p>${emergencyReferencePoints(r,window.bousaiLocations?.()||[]).length?`<button type="button" data-emergency-reference="${i}">区の参考位置を地図で確認</button>`:'<small>位置の対応は未確認です。</small>'} <a href="${esc(r.sourceURL)}" target="_blank" rel="noopener noreferrer">公式原文 ↗</a></article>`).join('');
  if(emergencies)emergencies.innerHTML+=providers.filter(s=>s.state==='review').map(s=>`<article class="water-card water-review"><b>${esc(s.name)}：原文の確認が必要です</b><p>掲載内容・形式の変更を確認したため、自動では発表内容を判定できません。</p><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">緊急情報の原文を確認 ↗</a></article>`).join('');
+ if(emergencies)emergencies.hidden=!emergencyReports.length&&!providers.some(s=>s.state==='review');
  if(emergencies&&!emergencies.innerHTML)emergencies.innerHTML='<p>連携した緊急欄に表示できる発表はありません。断水の有無は、以下の公式ページの確認状況と原文をご確認ください。</p>';
  if(data.emergencySources?.length)$('water-coverage').textContent+=` 緊急情報の先行確認：${data.emergencySources.filter(p=>p.ok).length}/${data.emergencySources.length}ページ取得（横浜・札幌、掲載範囲限定）。`;
  document.querySelectorAll('[data-emergency-reference]').forEach(b=>b.onclick=()=>{

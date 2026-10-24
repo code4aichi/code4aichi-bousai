@@ -1,7 +1,7 @@
 {
   "name": "ミエル防災 | Code for AICHI",
   "short_name": "ミエル防災",
-  "description": "全国の災害・避難・ライフライン情報",
+  "description": "災害時の水に焦点を当てた防災ポータル。断水の先行連携・登録給水施設・備蓄量を確認。",
   "start_url": "/mieru-bosai/",
   "display": "standalone",
   "background_color": "#ffffff",

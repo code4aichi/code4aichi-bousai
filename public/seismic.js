@@ -2,7 +2,7 @@
 (()=>{
  const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const when=s=>{const d=new Date(s);return Number.isFinite(d.valueOf())?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d)+' JST':'不明'};
- const intensity=s=>({'5-':'5弱','5+':'5強','6-':'6弱','6+':'6強'}[s]||s||'不明');
+ const intensity=s=>({'5-':'5弱','5+':'5強','6-':'6弱','6+':'6強'}[s]||s||'発表に記載なし');
  const official={earthquake:'https://www.jma.go.jp/bosai/map.html#contents=earthquake_map',tsunami:'https://www.jma.go.jp/bosai/map.html#contents=tsunami'};
  let reports=[],group=null,busy=false,lastSuccess=0,markers=new Map(),lastData=null;
  function mapEligible(r){return r.family==='earthquake'&&r.status==='通常'&&['発表','訂正'].includes(r.infoType)&&!r.cancelled&&r.coordinates&&Number.isFinite(r.coordinates.lat)&&Number.isFinite(r.coordinates.lng)}

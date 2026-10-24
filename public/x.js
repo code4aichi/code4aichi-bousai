@@ -8,8 +8,8 @@
   let revision=0;
   function render(p){const own=++revision,links=p?.links||{},ac=byId('detail-x-accounts'),note=byId('detail-x-note'),embed=byId('detail-x-embed-control'),timeline=byId('detail-x-timeline'),button=byId('detail-x-embed-button');
     if(!ac||!note||!embed||!timeline||!button)return;
-    timeline.replaceChildren();embed.hidden=true;ac.replaceChildren();button.disabled=false;button.textContent='公式Xの投稿をここに表示';button.onclick=null;
-    const profiles=[['防災関連X',validXUrl(links.disasterX)],['登録済み公式X',validXUrl(links.x)]].filter((e,i,a)=>e[1]&&!a.slice(0,i).some(v=>v[1]===e[1]));
+    timeline.replaceChildren();embed.hidden=true;ac.replaceChildren();button.disabled=false;button.textContent='登録Xの投稿をここに表示';button.onclick=null;
+    const profiles=[['防災関連X',validXUrl(links.disasterX)],['登録Xアカウント',validXUrl(links.x)]].filter((e,i,a)=>e[1]&&!a.slice(0,i).some(v=>v[1]===e[1]));
     profiles.forEach(([label,url])=>{const a=make('a','x-account');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.append(make('span','x-account-label',label),make('strong','', '@'+new URL(url).pathname.slice(1)),make('span','','↗'));ac.append(a)});
     const term=`"${p.name}" (災害 OR 避難 OR 断水 OR 警報)`;
     const search=byId('detail-x');if(search)search.href='https://x.com/search?q='+encodeURIComponent(term)+'&f=live';

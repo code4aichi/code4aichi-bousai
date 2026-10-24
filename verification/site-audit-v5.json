@@ -1,0 +1,42 @@
+{
+  "auditDate": "2026-10-24",
+  "basis": [
+    "user-supplied full-page screenshot",
+    "public browser interaction",
+    "local source code",
+    "official provider pages"
+  ],
+  "locations": {
+    "count": 1916,
+    "prefectures": 47,
+    "registeredLinks": 6131,
+    "httpLinks": 3796,
+    "linkReachabilityChecked": false,
+    "sha256": "785c92bf9ffb338454cb0258339ee5473c9929d4db14c3d6d349f8929595511f",
+    "origin": "legacy Google My Maps KMZ conversion",
+    "licenseStatus": "KMZ original and correspondence to LinkData require confirmation"
+  },
+  "sources": {
+    "nagoya": {
+      "url": "https://www.water.city.nagoya.jp/category/10200bousai/1527.html",
+      "license": "CC BY-ND 4.0",
+      "verified": true
+    },
+    "yokohama": {
+      "url": "https://www.city.yokohama.lg.jp/kurashi/sumai-kurashi/suido-gesui/suido/torikumi/saigai/oukyu-kyusui.html",
+      "license": "CC BY 4.0",
+      "verified": true
+    },
+    "jma": {
+      "url": "https://www.jma.go.jp/jma/kishou/info/coment.html",
+      "terms": "公共データ利用規約（第1.0版）、別の権利表記があるものを除く",
+      "verified": true
+    },
+    "linkdata": {
+      "url": "https://linkdata.org/work/rdf1s7478i",
+      "license": "CC BY 3.0",
+      "verified": true,
+      "note": "applies to displayed distribution files, not automatically to all KMZ-derived coordinates"
+    }
+  }
+}

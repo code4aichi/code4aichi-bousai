@@ -17,7 +17,7 @@
    if(/確認しています|取得しています/.test(text))return 'loading';return 'ok';
   });
   const state=statuses.includes('failed')?'failed':statuses.includes('partial')?'partial':statuses.includes('loading')?'loading':'ok';
-  const labels={failed:'取得失敗あり',partial:'一部未確認',loading:'確認中',ok:'取得済み'};
+  const labels={failed:'取得失敗あり',partial:'一部未確認',loading:'確認中',ok:'データ取得済み'};
   const badge=$('map-fetch-health');write(badge,labels[state]);badge.dataset.state=state;
  }
  const observer=new MutationObserver(sync);

@@ -34,9 +34,9 @@ window.bousaiLocations=()=>locations;
 window.bousaiRerender=update;
 window.bousaiShowDetail=showDetail;
 function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
- const names={official:'自治体公式サイト',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'公式X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
+ const names={official:'自治体サイト（登録リンク）',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'登録X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
  const links=Object.entries(p.links||{}).filter(([k,v])=>/^https?:\/\//i.test(v));
- const sections=[['防災・避難の公式情報',['disaster']],['水道・断水・生活情報',['water','utility']],['自治体・その他の発信',['official','x','disasterX','facebook']]];
+ const sections=[['防災・避難の登録リンク',['disaster']],['水道・断水・生活情報',['water','utility']],['自治体・その他の登録リンク',['official','x','disasterX','facebook']]];
  $('detail-links-v2').innerHTML=links.length?sections.map(([title,keys])=>{const items=links.filter(([k])=>keys.includes(k));return items.length?`<div class="link-category"><h3>${esc(title)}</h3>${items.map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} <span>↗</span></a>`).join('')}</div>`:''}).join('')+links.filter(([k])=>!sections.some(([,keys])=>keys.includes(k))).map(([k,v])=>`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">${esc(names[k]||k)} ↗</a>`).join(''):'<p>登録された関連リンクはありません。</p>';
  $('detail-x').href='https://x.com/search?q='+encodeURIComponent(p.name+' (断水 OR 災害 OR 避難)')+'&f=live';
  window.bousaiXDetail?.(p);
@@ -68,7 +68,7 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
  map=L.map('map-canvas',{zoomControl:false,minZoom:4,zoomSnap:.5,scrollWheelZoom:false}).setView([37.6,137.5],5);
  L.control.zoom({position:'bottomright'}).addTo(map);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
  window.map=map;
  group=typeof L.markerClusterGroup==='function'?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:55,showCoverageOnHover:false}):L.layerGroup();group.addTo(map);
  update();document.dispatchEvent(new Event('bousai:map-ready'));setTimeout(()=>map.invalidateSize(),150);window.addEventListener('hashchange',()=>setTimeout(()=>map.invalidateSize(),200));
