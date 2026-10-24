@@ -104,7 +104,7 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .map-section{padding:14px 10px 20px}.portal-heading{margin:0 0 8px}.portal-heading .kicker{display:none}.portal-heading h1{font-size:21px;line-height:1.4}.portal-scope{font-size:12px;line-height:1.6;margin:0 0 10px}
  .purpose-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}.purpose-shortcuts a{font-size:12px;min-height:42px;padding:7px 4px;white-space:nowrap}
  .v2-controls{gap:7px;margin-bottom:10px}.v2-search{padding:8px 10px}.v2-search span{font-size:19px}.v2-controls select,.v2-outline{padding:10px 12px;min-height:44px}.v2-controls select{font-size:14px}.map-tools{gap:6px;margin-bottom:8px}.map-tools summary{min-height:44px;padding:8px 10px}.settings-summary-main small{display:none}
- .v2-map-area{height:370px;min-height:370px}.v2-map-head{gap:6px;padding:7px 8px}.v2-map-head .map-legend{flex-basis:100%;font-size:11px;gap:3px 10px}.v2-map-head .map-legend span{font-size:11px}.map-key-details{font-size:11px}.map-key-details summary{min-height:24px}.v2-map-head button{min-height:36px;padding:6px 9px;font-size:12px}.v2-map-head .location-status{font-size:11px;line-height:1.5}.v2-map-note{font-size:11px;padding:6px 9px;line-height:1.5}
+ .v2-map-shell{min-height:0;height:auto}.v2-map-area{height:auto;min-height:0;flex:none}.v2-map-area #map-canvas{flex:none;height:280px;height:clamp(240px,42svh,340px);min-height:240px}.v2-map-head{gap:6px;padding:7px 8px}.v2-map-head .map-legend{flex-basis:100%;font-size:11px;gap:3px 10px}.v2-map-head .map-legend span{font-size:11px}.map-key-details{font-size:11px}.map-key-details summary{min-height:44px}.v2-map-head button{min-height:44px;padding:6px 9px;font-size:12px}.v2-map-head .location-status{font-size:11px;line-height:1.5}.v2-map-note{font-size:11px;padding:6px 9px;line-height:1.5;max-width:none;width:100%}
  .v2-results{max-height:none}.mobile-region-list{height:auto}.mobile-disclosure>summary{display:flex;cursor:pointer;list-style:none;min-height:48px;padding:11px 12px;font-size:14px;font-weight:700;color:#174a58;background:#f5f9f8}.mobile-disclosure>summary::-webkit-details-marker{display:none}.mobile-disclosure>summary:after{content:'＋';font-size:18px;margin-left:8px}.mobile-disclosure[open]>summary:after{content:'−'}.mobile-disclosure>summary:focus-visible{outline:3px solid #17635c;outline-offset:-3px}
  .mobile-region-list #region-browser{height:auto}.mobile-region-list .v2-results-heading{display:none}.mobile-region-list .v2-list{max-height:230px}.mobile-region-list .v2-place{padding:10px 12px;min-height:54px}.mobile-region-list .v2-result-foot{font-size:11px;padding:8px 12px}.mobile-region-list .tool-count{margin-left:auto}.mobile-region-list .v2-place small{font-size:11px}
  .water-panel{margin:12px 0;padding:12px}.water-panel h2{font-size:20px;margin-bottom:6px}.water-panel>p:first-of-type{font-size:12px!important;line-height:1.6;margin:6px 0}.coverage-details{margin:4px 0}.coverage-details summary{padding:5px 0;font-size:12px}.water-update-panel{padding:9px 10px;margin:8px 0}.water-update-heading{gap:6px}.water-update-heading strong{font-size:12px;flex:1}.water-update-heading button{flex-basis:auto;margin-left:auto;min-height:36px;font-size:12px;padding:5px 9px}.water-update-health{font-size:11px;padding:3px 6px}.water-update-panel>p{font-size:12px!important;line-height:1.6;margin:6px 0}.water-status-links summary{font-size:12px;padding:5px 0}
@@ -116,3 +116,23 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 }
 @media(max-width:800px){.purpose-shortcuts a,.v2-map-head button,.water-update-heading button,.water-report-controls button{min-height:44px}.v2-controls select{font-size:16px}}
 @media(max-width:800px){#mobile-facility-saves>summary{padding:4px 2px;min-height:40px;background:none;font-size:13px}#mobile-facility-saves[open]>summary{margin-bottom:8px}}
+
+/* v5.2.1: one mobile breakpoint and intrinsic content sizing. */
+@media(max-width:800px){
+ .header{gap:10px;height:auto;min-height:58px;flex-wrap:wrap;position:relative}
+ .header .brand{min-width:0;gap:8px}.header .brand strong{overflow-wrap:anywhere}
+ .header .nav{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:12px;padding:16px;background:white;box-shadow:0 14px 20px #123c4b18}
+ .header .nav.open{display:flex}.mobile-menu{display:block;flex-shrink:0;min-width:44px;min-height:44px}
+ .v2-results{flex:none;overflow:visible;min-height:0;height:auto}
+ .v2-map-head,.v2-map-head .map-legend,.mobile-disclosure>summary{min-width:0;overflow-wrap:anywhere}
+ .v2-map-head .location-status{min-width:0;overflow-wrap:anywhere}
+ .v2-controls{display:grid;grid-template-columns:minmax(0,1fr) auto}
+ .v2-search{grid-column:1/-1;width:100%;min-width:0}.v2-search input{font-size:16px}
+ .v2-controls select{width:100%;max-width:100%;min-width:0}
+ .map-tools>*{min-width:0}.settings-summary-main{min-width:0}
+ .water-view-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+ .water-view-nav a{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:center}
+ .facility-card>div{flex-wrap:wrap}.facility-card b{min-width:0;overflow-wrap:anywhere}
+ .stock-results{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .stock-results>div{min-width:0;overflow-wrap:anywhere}
+}
