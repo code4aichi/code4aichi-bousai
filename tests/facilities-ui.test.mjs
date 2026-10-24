@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {buildFacilityMemo} from '../public/facility-memo.mjs';
-import {createFacilityFavorites,FACILITY_SAVED_KEY} from '../public/facility-favorites.mjs';
+import {createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity} from '../public/facility-favorites.mjs';
 import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from '../public/facility-model.mjs';
 const data=JSON.parse(fs.readFileSync(new URL('../public/nagoya-water-facilities.json',import.meta.url)));
 const yokohama=JSON.parse(fs.readFileSync(new URL('../public/yokohama-water-facilities.json',import.meta.url)));
@@ -12,8 +12,8 @@ async function ui(failed=false,missing=[],storage=null){
  const element=id=>{if(!fields.has(id))fields.set(id,{value:'',checked:false,disabled:false,textContent:'',innerHTML:'',hidden:true,dataset:{},append(){},addEventListener:(event,fn)=>listeners[id+':'+event]=fn,querySelectorAll:()=>[],focus(){},click(){}});return fields.get(id)};
  const values=new Map();
  const window={localStorage:storage||{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)}};
- const ctx=vm.createContext({FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds,buildFacilityMemo,createFacilityFavorites,FACILITY_SAVED_KEY,window,Map,Date,Intl,Number,String,Math,setTimeout,clearTimeout,setInterval(){},document:{getElementById:element,createElement:()=>({click(){}}),addEventListener:(event,fn)=>listeners[event]=fn},fetch:async url=>{requests.push(url);return failed||missing.includes(url.includes('yokohama')?'yokohama':'nagoya')?new Response('',{status:503}):Response.json(url.includes('yokohama')?yokohama:data)}});
- vm.runInContext(fs.readFileSync(new URL('../public/facilities.mjs',import.meta.url),'utf8').replace(/^(?:import .*\n)+/,''),ctx);for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));return {element,listeners,window,requests,copyFacility:ctx.copyFacility,toggleSavedFacility:ctx.toggleSavedFacility};
+ const ctx=vm.createContext({FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds,buildFacilityMemo,createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity,window,Map,Date,Intl,Number,String,Math,setTimeout,clearTimeout,setInterval(){},document:{getElementById:element,createElement:()=>({click(){}}),addEventListener:(event,fn)=>listeners[event]=fn},fetch:async url=>{requests.push(url);return failed||missing.includes(url.includes('yokohama')?'yokohama':'nagoya')?new Response('',{status:503}):Response.json(url.includes('yokohama')?yokohama:data)}});
+ vm.runInContext(fs.readFileSync(new URL('../public/facilities.mjs',import.meta.url),'utf8').replace(/^(?:import .*\n)+/,''),ctx);for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));return {element,listeners,window,requests,copyFacility:ctx.copyFacility,toggleSavedFacility:ctx.toggleSavedFacility,removeSavedFacility:ctx.removeSavedFacility};
 }
 test('registered facilities load without asking location or enabling a crowded map layer',async()=>{
  const h=await ui();assert.equal(h.element('show-facilities').checked,false);assert.match(h.element('facility-count').textContent,/1135件/);assert.match(h.element('facility-list').innerHTML,/開設状況未確認/);assert.deepEqual(h.requests,['/mieru-bosai/nagoya-water-facilities.json?v=4.9.0','/mieru-bosai/yokohama-water-facilities.json?v=4.9.0']);
@@ -49,3 +49,16 @@ test('failed storage write does not claim successful save',async()=>{const h=awa
 
 test('memo download includes all saves even when current filters hide them',async()=>{const h=await ui(),f=parseProviderFacilities('nagoya',data)[0];h.toggleSavedFacility(f.id);h.element('facility-provider').value='yokohama';h.listeners['facility-provider:change']();let blob;h.window.Blob=Blob;h.window.URL={createObjectURL:b=>{blob=b;return 'blob:example'},revokeObjectURL(){}};h.element('facility-save-memo').onclick();assert.match(await blob.text(),new RegExp(f.name));assert.match(h.element('facility-action-status').textContent,/1件/);assert.equal(h.requests.length,2)});
 test('memo with no saves gives an actionable message without download',async()=>{const h=await ui();h.element('facility-save-memo').onclick();assert.match(h.element('facility-action-status').textContent,/先に一覧から/)});
+
+test('saved manager shows unmatched entries independently of search filters and can remove them',async()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},old={...parseProviderFacilities('nagoya',data)[0],name:'以前保存した施設'};createFacilityFavorites(storage).toggle(old);
+ const h=await ui(false,[],storage);h.element('facility-provider').value='yokohama';h.listeners['facility-provider:change']();assert.match(h.element('facility-saved-manager-list').innerHTML,/以前保存した施設/);assert.match(h.element('facility-saved-manager-list').innerHTML,/照合できません/);assert.match(h.element('facility-saved-manager-list').innerHTML,/廃止を意味しません/);
+ h.removeSavedFacility(old);assert.match(h.element('facility-saved-manager-status').textContent,/保存を解除/);assert.match(h.element('facility-saved-manager-title').textContent,/0件/);assert.equal(h.element('facility-provider').value,'yokohama');assert.match(h.element('facility-count').textContent,/515件/);
+});
+test('saved manager remains available when both facility datasets fail',async()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},f=parseProviderFacilities('nagoya',data)[0];createFacilityFavorites(storage).toggle(f);
+ const h=await ui(true,[],storage);assert.match(h.element('facility-saved-manager-list').innerHTML,/施設データを取得できず/);assert.match(h.element('facility-saved-manager-list').innerHTML,/water.city.nagoya.jp/);h.removeSavedFacility(f);assert.equal(createFacilityFavorites(storage).count(),0);assert.match(h.element('facility-saved-manager-title').textContent,/0件/);assert.equal(h.requests.length,2);
+});
+test('failed removal does not hide a saved facility or claim success',async()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},f=parseProviderFacilities('nagoya',data)[0];createFacilityFavorites(storage).toggle(f);const h=await ui(false,[],storage);storage.setItem=()=>{throw Error('blocked')};h.removeSavedFacility(f);assert.match(h.element('facility-saved-manager-status').textContent,/解除できません/);assert.match(h.element('facility-saved-manager-title').textContent,/1件/);
+});

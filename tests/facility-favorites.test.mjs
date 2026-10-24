@@ -27,3 +27,10 @@ test('maximum count still allows removing saved facilities',()=>{
  const s=storage(),a=createFacilityFavorites(s);for(let i=0;i<100;i++)a.toggle({...facility,name:String(i)});
  assert.equal(a.toggle(facility).reason,'limit');assert.equal(a.toggle({...facility,name:'0'}).saved,false);assert.equal(a.count(),99);
 });
+test('explicit remove is idempotent and does not restore an entry another session removed',()=>{
+ const s=storage(),a=createFacilityFavorites(s),b=createFacilityFavorites(s);a.toggle(facility);assert.equal(b.remove(facility).removed,true);assert.equal(a.remove(facility).removed,false);assert.equal(a.count(),0);
+});
+test('removal failure retains saved entry and other session saves are preserved',()=>{
+ const s=storage(),a=createFacilityFavorites(s),b=createFacilityFavorites(s),other={...facility,name:'別の施設'};a.toggle(facility);b.toggle(other);assert.equal(a.remove(facility).ok,true);assert.equal(a.has(other),true);
+ s.setItem=()=>{throw Error('blocked')};assert.equal(a.remove(other).ok,false);assert.equal(a.has(other),true);
+});

@@ -1,14 +1,31 @@
 import {buildFacilityMemo} from './facility-memo.mjs';
-import {createFacilityFavorites,FACILITY_SAVED_KEY} from './facility-favorites.mjs';
+import {createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity} from './facility-favorites.mjs';
 import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from './facility-model.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null;
+let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null,facilityDataPending=true;
 let facilityStorage;try{facilityStorage=window.localStorage}catch{}
 const savedFacilities=createFacilityFavorites(facilityStorage);
+function renderSavedManager(){
+ const entries=savedFacilities.entries(),current=new Map(facilities.map(f=>[facilityIdentity(f),f])),matched=entries.filter(f=>current.has(facilityIdentity(f))).length;
+ $('facility-saved-manager-title').textContent=`保存した施設を管理（${entries.length}件）`;
+ $('facility-saved-note').textContent=savedFacilities.available()?`保存${entries.length}件（今回読み込んだデータで照合できた施設：${matched}件）。このブラウザ内に保存します。ほかの検索条件も適用されます。`:'保存した施設を読み込めません。ブラウザの保存設定をご確認ください。施設検索は引き続き利用できます。';
+ $('facility-saved-manager-list').innerHTML=entries.length?entries.map((entry,index)=>{
+  const found=current.has(facilityIdentity(entry)),provider=FACILITY_PROVIDERS[entry.provider];
+  const state=found?'今回の登録データと照合できました。開設・給水状況は未確認です。':facilityDataPending?'施設データを照合しています。':!loaded?'施設データを取得できず、現在の登録状況は未確認です。':'今回の登録データと照合できません。未取得・変更等の可能性があり、廃止を意味しません。';
+  return `<article class="facility-saved-card"><b>${esc(entry.name)}</b><p>${esc(provider.name)} ／ ${esc(entry.address||'住所情報なし')}</p><p class="facility-note">${esc(state)}</p><a href="${esc(provider.url)}" target="_blank" rel="noopener noreferrer">提供元の公式案内 ↗</a> <button type="button" data-saved-remove="${index}">この施設の保存を解除</button></article>`;
+ }).join(''):savedFacilities.available()?'<p class="facility-note">保存した施設はありません。一覧の「この施設を保存」から追加できます。</p>':'<p class="facility-note">保存一覧を読み込めません。保存内容は自動削除していません。</p>';
+ $('facility-saved-manager-list').querySelectorAll('[data-saved-remove]').forEach(b=>b.onclick=()=>removeSavedFacility(entries[Number(b.dataset.savedRemove)]));
+}
+function removeSavedFacility(entry){
+ if(!entry)return;
+ const result=savedFacilities.remove(entry);render(true);draw();
+ $('facility-saved-manager-status').textContent=result.ok?(result.removed?`${entry.name}の保存を解除しました。`:`${entry.name}は既に保存から外れています。`):'保存を解除できませんでした。保存内容は維持しています。ブラウザの保存設定をご確認ください。';
+ $('facility-saved-manager-status').focus();
+}
 function downloadFacilityMemo(){
  const status=$('facility-action-status');
- if(!savedFacilities.reload()){status.textContent='保存した施設を読み込めません。ブラウザの保存設定をご確認ください。';return}
- const saved=savedFacilities.entries();if(!saved.length){status.textContent='先に一覧から給水施設を保存してください。';return}
+ if(!savedFacilities.reload()){renderSavedManager();status.textContent='保存した施設を読み込めません。ブラウザの保存設定をご確認ください。';return}
+ renderSavedManager();const saved=savedFacilities.entries();if(!saved.length){status.textContent='先に一覧から給水施設を保存してください。';return}
  let url;
  try{
   const html=buildFacilityMemo(saved,facilities,{sources:Object.fromEntries(loadedSources.map(s=>[s.id,s.data.source||{}]))});
@@ -52,11 +69,10 @@ async function copyFacility(id){
 }
 function render(keepPage=false){
  if(keepPage!==true){visibleCount=30;$('facility-action-status').textContent=''}
+ renderSavedManager();
  if(!loaded)return;
  const p=position();if(nearest&&!p){nearest=false;$('facility-distance-note').textContent='現在地の取得から時間が経ちました。距離順で探す場合は、現在地を再取得してください。'}
  filtered=filterFacilities(facilities,{query:$('facility-search').value,region:$('facility-region').value,type:$('facility-type').value,provider:$('facility-provider').value,position:nearest?p:null}).filter(f=>inFacilityBounds(f,searchBounds)&&(!$('facility-only-saved').checked||savedFacilities.has(f)));
- const matchedSaved=facilities.filter(f=>savedFacilities.has(f)).length;
- $('facility-saved-note').textContent=savedFacilities.available()?`保存${savedFacilities.count()}件（今回読み込んだデータで照合できた施設：${matchedSaved}件）。このブラウザ内に保存します。ほかの検索条件も適用されます。`:'保存した施設を読み込めません。ブラウザの保存設定をご確認ください。施設検索は引き続き利用できます。';
  $('facility-bounds-clear').hidden=!searchBounds;
  $('facility-bounds-note').textContent=searchBounds?'地図範囲の条件：ボタンを押した時点の範囲で絞り込み中です。地図を移動した場合は、もう一度「この地図範囲で探す」を押してください。ほかの検索条件も適用されます。':'';
  $('facility-count').textContent=`${filtered.length}件 / 登録給水施設${facilities.length}件`;
@@ -99,7 +115,7 @@ function useSelectedRegion(){
 }
 $('facility-save-memo').onclick=downloadFacilityMemo;
 $('facility-only-saved').addEventListener('change',render);
-window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();if(loaded)render()}});
+window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();render()}});
 $('facility-use-selection').onclick=useSelectedRegion;
 document.addEventListener('bousai:selection',()=>{const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
 $('facility-use-bounds').onclick=()=>{
@@ -120,6 +136,7 @@ document.addEventListener('bousai:position',()=>{if(pending){pending=false;clear
 document.addEventListener('bousai:position-error',()=>{pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地を取得できませんでした。施設名・地域で検索できます。'});
 document.addEventListener('bousai:map-ready',()=>{if(loaded)render()});
 setInterval(()=>{if(nearest&&!position())render()},30000);
+renderSavedManager();
 (async()=>{
  const summary=$('facility-summary');summary.dataset.fetchState='loading';
  try{
@@ -127,7 +144,7 @@ setInterval(()=>{if(nearest&&!position())render()},30000);
    try{const r=await fetch(provider.dataURL);if(!r.ok)throw Error();const data=await r.json(),rows=parseProviderFacilities(id,data);if(!rows.length)throw Error();return {id,provider,data,rows,ok:true}}
    catch{return {id,provider,ok:false}}
   }));
-  loadedSources=results.filter(s=>s.ok);if(!loadedSources.length)throw Error();facilities=loadedSources.flatMap(s=>s.rows);loaded=true;
+  facilityDataPending=false;loadedSources=results.filter(s=>s.ok);if(!loadedSources.length)throw Error();facilities=loadedSources.flatMap(s=>s.rows);loaded=true;
   $('facility-provider').innerHTML='<option value="">すべての提供元</option>';
   for(const result of results){const option=document.createElement('option');option.value=result.id;option.textContent=result.provider.label+(result.ok?`（${result.rows.length}件）`:'（取得できず未確認）');option.disabled=!result.ok;$('facility-provider').append(option)}
   refreshFilters();
@@ -135,5 +152,5 @@ setInterval(()=>{if(nearest&&!position())render()},30000);
   summary.textContent=`登録給水施設：${facilities.length.toLocaleString('ja-JP')}件を読み込みました${missing.length?` ／ 一部地域未取得：${missing.join('・')}`:''}。開設状況は未確認です。`;summary.dataset.fetchState=missing.length?'partial':'ok';
   $('facility-source').innerHTML=loadedSources.map(s=>{const p=s.provider,recorded=s.data.source?.retrievedAt?.slice(0,10)||'不明';return `<span class="facility-source-item"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.name)}</a>：${s.rows.length}件 ／ <a href="${esc(p.licenseURL)}" target="_blank" rel="noopener noreferrer">${esc(p.license)}</a>。収録日：${esc(recorded)}。<a href="${p.originalURL}" download>収録原本</a></span>`}).join('')+'<span class="facility-source-item">名称・住所・数値等の元の各項目は変更せず保持。横浜市は公開CSVに含まれる施設が対象で、市のすべての給水施設を網羅するものではありません。</span>';
   render();
- }catch{loaded=false;group?.clearLayers();$('show-facilities').disabled=true;summary.textContent='登録給水施設データを取得できません。施設の所在・状況は未確認です。';summary.dataset.fetchState='failed';$('facility-list').textContent='公式ページからご確認ください。';$('facility-use-current').disabled=true;$('facility-show-results').disabled=true;}
+ }catch{facilityDataPending=false;loaded=false;renderSavedManager();group?.clearLayers();$('show-facilities').disabled=true;summary.textContent='登録給水施設データを取得できません。施設の所在・状況は未確認です。';summary.dataset.fetchState='failed';$('facility-list').textContent='公式ページからご確認ください。';$('facility-use-current').disabled=true;$('facility-show-results').disabled=true;}
 })();

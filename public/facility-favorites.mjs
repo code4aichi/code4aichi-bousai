@@ -1,6 +1,6 @@
 export const FACILITY_SAVED_KEY='mieru-bosai:facility-favorites:v1';
 // Use public facility identity, not a row number that may be reassigned.
-const identity=f=>JSON.stringify([f.provider,f.name,f.address||'',f.lat,f.lng]);
+export const facilityIdentity=f=>JSON.stringify([f.provider,f.name,f.address||'',f.lat,f.lng]);
 export function createFacilityFavorites(storage){
  let keys=new Set(),available=true;
  function reload(){
@@ -15,14 +15,22 @@ export function createFacilityFavorites(storage){
  }
  reload();
  return {
-  has:f=>keys.has(identity(f)),count:()=>keys.size,available:()=>available,reload,
+  has:f=>keys.has(facilityIdentity(f)),count:()=>keys.size,available:()=>available,reload,
   entries:()=>[...keys].map(k=>{const [provider,name,address,lat,lng]=JSON.parse(k);return {provider,name,address,lat,lng}}),
   toggle(f){
    if(!reload())return {ok:false,reason:'storage'};
-   const key=identity(f),next=new Set(keys),saved=!next.has(key);
+   const key=facilityIdentity(f),next=new Set(keys),saved=!next.has(key);
    if(saved&&next.size>=100)return {ok:false,reason:'limit'};
    if(saved)next.add(key);else next.delete(key);
    try{storage.setItem(FACILITY_SAVED_KEY,JSON.stringify([...next]));keys=next;return {ok:true,saved}}
+   catch{available=false;return {ok:false,reason:'storage'}}
+  },
+  remove(f){
+   if(!reload())return {ok:false,reason:'storage'};
+   const key=facilityIdentity(f);
+   if(!keys.has(key))return {ok:true,removed:false};
+   const next=new Set(keys);next.delete(key);
+   try{storage.setItem(FACILITY_SAVED_KEY,JSON.stringify([...next]));keys=next;return {ok:true,removed:true}}
    catch{available=false;return {ok:false,reason:'storage'}}
   }
  };
