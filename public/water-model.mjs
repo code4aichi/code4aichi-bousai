@@ -30,3 +30,17 @@ export function waterFeatures(data,locations,planned=false){
  }features.push(...groups.values())}
  return {type:'FeatureCollection',features,rejected:verified.rejected};
 }
+export function waterReportSelection(place){
+ const name=regionName(place?.name),pref=regionName(place?.prefecture).replace(/県$/,'');
+ if(pref==='神奈川'&&(name==='横浜市'||/^横浜市.+区$/.test(name)))return 'yokohama';
+ if(pref==='北海道'&&(name==='札幌市'||/^札幌市.+区$/.test(name)))return 'sapporo';
+ if(pref==='愛知'&&(name==='名古屋市'||/^名古屋市.+区$/.test(name)||['清須市','北名古屋市','あま市','大治町','海部郡大治町'].includes(name)))return 'nagoya';
+ return null;
+}
+export function waterReportView(data,key=''){
+ const selected=['nagoya','yokohama','sapporo','registered'].includes(key)?key:'';
+ const showEmergency=!selected||['yokohama','sapporo'].includes(selected),showPlans=!selected||selected==='nagoya',showRegistered=!selected||selected==='registered';
+ const emergencySources=showEmergency?(data.emergencySources||[]).filter(s=>!selected||s.id===selected):[];
+ const urls=new Set(emergencySources.map(s=>s.url));
+ return {showEmergency,showPlans,showRegistered,emergencySources,emergencyReports:showEmergency?(data.emergencyReports||[]).filter(r=>!selected||urls.has(r.sourceURL)):[],notices:showPlans?data.notices:[],verifiedEvents:showRegistered?data.verifiedEvents:{type:'FeatureCollection',features:[]}};
+}
