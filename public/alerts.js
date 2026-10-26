@@ -6,6 +6,9 @@ const $=id=>document.getElementById(id);
 const clean=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,lastTime=null,fetching=false,regionMatches=new Map(),areaRetrievedAt=null;
 const category=i=>Number(i.level)||0;
+const rainCodes=new Set(['03','10','33','43']),floodCodes=new Set(['04','18','34','44']);
+const mapItems=items=>items.filter(i=>!$('rain-map-filter')?.value||($('rain-map-filter').value==='rain'?rainCodes:floodCodes).has(i.code));
+window.bousaiRainState=()=>({loaded,areaOk,retrievedAt:lastTime,points:(window.bousaiLocations?.()||[]).map(p=>({id:p.id,name:p.name,prefecture:p.prefecture,checked:!!(loaded&&areaOk&&matchById.has(p.id)&&resultsFor(p)?.ok),items:alertsFor(p,true)}))});
 const itemsAllowed=items=>items.filter(x=>category(x)>=($('show-advisories')?.checked?1:2));
 const resultsFor=p=>{const m=regionMatches.get(p.id);return m?.status==='matched'?results.find(x=>x.office===m.officeCode):null};
 const setText=(id,val)=>{const e=$(id);if(e)e.textContent=String(val)};
@@ -40,7 +43,7 @@ function alertsFor(p,ignoreAdvisories=false){
  const current=(office.items||[]).filter(i=>Array.isArray(i.areas)&&i.areas.includes(code));
  return ignoreAdvisories?current:itemsAllowed(current);
 }
-window.bousaiSeverity=p=>($('show-alerts')?.checked&&loaded&&areaOk)?Math.max(0,...alertsFor(p).map(category)):0;
+window.bousaiSeverity=p=>($('show-alerts')?.checked&&loaded&&areaOk)?Math.max(0,...mapItems(alertsFor(p)).map(category)):0;
 window.bousaiBadge=p=>{const lvl=window.bousaiSeverity(p);return lvl?`<b class="mini-alert level-${lvl}" title="この自治体に警報・注意報の発表あり">!</b>`:'⌖'};
 function updateDetails(){
  const el=$('detail-alerts'),p=window.bousaiCurrentSelection?.();if(!el||!p)return;
@@ -55,7 +58,7 @@ function updateDetails(){
  el.innerHTML=active.length?`<ul>${active.map(i=>`<li><strong>${clean(i.name)}</strong> <span class="alert-status-name">${clean(i.statuses?.join(' / ')||'発表情報あり')}</span></li>`).join('')}</ul><p class="alert-note">気象庁発表：${clean(reportDate)} ／ 市区町村相当区域で照合</p>`:'<p>取得した発表情報に、該当区域の警報・注意報は含まれていません。ただし安全を保証する表示ではありません。</p>';
 }
 function render(){
- window.bousaiRerender?.();updateDetails();
+ window.bousaiRerender?.();updateDetails();document.dispatchEvent(new Event('bousai:rain-update'));
  const panel=$('alert-region-list');if(!panel)return;panel.replaceChildren();
  const note=$('alert-list-note');
  if(!$('show-alerts')?.checked){if(note)note.textContent='地図上のアラート表示はオフです';return}
@@ -87,6 +90,7 @@ async function fetchData(){
 let initialized=false;
 async function init(){if(initialized||!window.bousaiLocations)return;initialized=true;
  $('refresh-alerts').onclick=fetchData;
+ if($('rain-map-filter'))$('rain-map-filter').onchange=()=>{$('show-alerts').checked=true;render()};
  $('show-alerts').onchange=render;$('show-advisories').onchange=render;
  document.addEventListener('bousai:selection',updateDetails);
  await fetchData();setInterval(fetchData,5*60*1000);
