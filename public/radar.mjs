@@ -16,7 +16,7 @@ export function initRadar({doc=document,win=window,leaflet=globalThis.L,fetcher=
  const $=id=>doc.getElementById(id),toggle=$('show-radar'),status=$('radar-status'),badge=$('radar-map-badge'),button=$('radar-refresh');
  let layer=null,frame=null,controller=null,sequence=0,busy=false,tileFailed=false;
  const clear=()=>{layer?.remove();layer=null;frame=null;badge.hidden=true};
- const say=(message,state)=>{status.textContent=message;status.dataset.fetchState=state;badge.textContent=message;badge.dataset.state=state;badge.hidden=!toggle.checked};
+ const say=(message,state)=>{status.textContent=message;status.dataset.fetchState=state;const stamp=message.match(/^雨雲（実況） (.+?) ／/);badge.textContent=stamp?`雨雲 ${stamp[1]}${state==='partial'?'・一部未確認':state==='loading'?'・読込中':''}`:state==='failed'?'雨雲：取得失敗':state==='loading'?'雨雲：確認中':'雨雲：オフ';badge.dataset.state=state;badge.hidden=!toggle.checked};
  function off(){sequence++;controller?.abort();busy=false;button.disabled=false;clear();say('雨雲表示はオフです。','off')}
  async function refresh(){
   if(!toggle.checked||busy)return;
@@ -57,7 +57,7 @@ export function initRadar({doc=document,win=window,leaflet=globalThis.L,fetcher=
  timer(()=>{if(toggle.checked&&frame&&!radarFresh(frame,now())){sequence++;controller?.abort();busy=false;button.disabled=false;clear();say('雨雲の表示時刻が古いため表示を外しました。更新してください。','failed')}},30000);
  timer(()=>{if(toggle.checked&&!doc.hidden)refresh()},300000);
  doc.addEventListener('visibilitychange',()=>{if(!doc.hidden&&toggle.checked)refresh()});
- win.addEventListener('online',()=>{if(toggle.checked)refresh()});toggle.checked=false;off();
+ win.addEventListener('online',()=>{if(toggle.checked)refresh()});if(toggle.checked){if(win.bousaiMap)refresh();else say('地図の準備ができ次第、雨雲を読み込みます。','loading')}else off();
  return {refresh};
 }
 if(typeof document!=='undefined')initRadar();

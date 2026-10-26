@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fitNation,observeMapSize,NATIONAL_BOUNDS} from '../public/map-viewport.mjs';
+import {fitNation,fitHome,observeMapSize,NATIONAL_BOUNDS} from '../public/map-viewport.mjs';
 test('national reset retains zoom 5 on desktop and mobile with an enlarged frame',()=>{
  const calls=[];const map={stop(){},invalidateSize(){},fitBounds:(...a)=>calls.push(['bounds',...a]),setView:(...a)=>calls.push(['view',...a])};
  fitNation(map);assert.deepEqual(calls[0],['view',[34.05,138],5,{animate:false}]);
@@ -14,3 +14,5 @@ test('size observer does not reposition on load or call setView during resize',(
  size={width:0,height:0};cb();assert.equal(frame,null);
  size={width:650,height:240};cb();frame();assert.deepEqual(calls,[{pan:true,animate:false,debounceMoveend:true}]);stop();assert.equal(disconnected,true);
 });
+
+test('initial view centres Aichi without changing the overview zoom',()=>{let view;fitHome({stop(){},invalidateSize(){},setView(...args){view=args}});assert.deepEqual(view,[[35.1,137],5,{animate:false}])});

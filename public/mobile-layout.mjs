@@ -1,5 +1,5 @@
 export function initMobileLayout(doc=document,win=window){
- const media=win.matchMedia('(max-width: 800px)'),ids=['mobile-region-list','mobile-seismic','mobile-site-info','mobile-facility-saves'],sections=ids.map(id=>doc.getElementById(id)).filter(Boolean),region=doc.getElementById('mobile-region-list'),browser=doc.getElementById('region-browser');
+ const media=win.matchMedia('(max-width: 800px)'),ids=['mobile-region-list','mobile-facility-saves'],sections=ids.map(id=>doc.getElementById(id)).filter(Boolean),region=doc.getElementById('mobile-region-list'),browser=doc.getElementById('region-browser');
  function revealHash(){
   let target;try{target=doc.getElementById(decodeURIComponent(win.location.hash.slice(1)))}catch{return}
   if(!target)return;

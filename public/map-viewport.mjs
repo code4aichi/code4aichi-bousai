@@ -1,5 +1,8 @@
 // The enlarged frame keeps the national overview at the established zoom.
 export const NATIONAL_BOUNDS=[[20,122],[46,154]];
+export function fitHome(map){
+ map.stop();map.invalidateSize({pan:true,animate:false});map.setView([35.1,137],5,{animate:false});
+}
 export function fitNation(map){
  map.stop();
  map.invalidateSize({pan:true,animate:false});

@@ -14,14 +14,16 @@ test('metadata fetch uses the fixed official endpoint and rejects HTTP errors an
  let requested;const d=await radarData(async u=>{requested=u;return Response.json([row])},now);assert.equal(requested,RADAR_TIMES);assert.equal(d.frame.validtime,stamp);
  await assert.rejects(()=>radarData(async()=>new Response('',{status:503}),now));await assert.rejects(()=>radarData(async()=>Response.json([row]),now+3600000));
 });
-function ui(fetcher=async()=>Response.json({ok:true,frame}),ImageClass){
+function ui(fetcher=async()=>Response.json({ok:true,frame}),ImageClass,defaultOn=false,mapReady=true){
  const els=new Map(['show-radar','radar-status','radar-map-badge','radar-refresh'].map(id=>[id,{checked:false,disabled:false,hidden:false,dataset:{},events:{},addEventListener(e,f){this.events[e]=f}}]));
+ els.get('show-radar').checked=defaultOn;
  const layers=[],timers=[],events={};let clock=now;
  const map={getPane:()=>({}),createPane:()=>({style:{}})};
  const leaflet={TileLayer:{prototype:{_clampZoom:z=>z},extend(methods){return function(url,options){const l={url,options,events:{},on(e,f){this.events[e]=f;return this},addTo(){layers.push(this);return this},remove(){this.removed=true}};Object.assign(l,methods);return l}}}};
  const doc={getElementById:id=>els.get(id),addEventListener(e,f){events[e]=f}};
- const h=initRadar({doc,win:{bousaiMap:map,Image:ImageClass,addEventListener(){}},leaflet,fetcher,now:()=>clock,timer:f=>timers.push(f)});
- return {...h,el:id=>els.get(id),layers,timers,clock:t=>clock=t,enable(){els.get('show-radar').checked=true;return els.get('show-radar').events.change()},off(){els.get('show-radar').checked=false;els.get('show-radar').events.change()}};
+ const win={bousaiMap:mapReady?map:null,Image:ImageClass,addEventListener(){}};
+ const h=initRadar({doc,win,leaflet,fetcher,now:()=>clock,timer:f=>timers.push(f)});
+ return {...h,ready(){win.bousaiMap=map;events['bousai:map-ready']()},el:id=>els.get(id),layers,timers,clock:t=>clock=t,enable(){els.get('show-radar').checked=true;return els.get('show-radar').events.change()},off(){els.get('show-radar').checked=false;els.get('show-radar').events.change()}};
 }
 test('initially off; explicit enable adds only the radar layer without moving or zooming the map',async()=>{
  const h=ui();assert.equal(h.layers.length,0);await h.enable();assert.equal(h.layers.length,1);assert.equal(h.layers[0].options.pane,'rain-radar');assert.equal(h.layers[0]._clampZoom(5),4);assert.equal(h.layers[0]._clampZoom(8),8);h.layers[0].events.load();assert.equal(h.el('radar-status').dataset.fetchState,'ok');h.off();assert.equal(h.layers[0].removed,true);assert.equal(h.el('radar-map-badge').hidden,true);
@@ -52,3 +54,5 @@ test('aborting a pending image probe cannot leave the request waiting or recreat
  class Img{set src(value){}}
  const controller=new AbortController();const pending=verifyRadarImage(frame,{ImageClass:Img,signal:controller.signal});controller.abort();await assert.rejects(pending,/Aborted/);
 });
+
+test('default-enabled radar waits for map readiness and does not re-enable after user switches it off',async()=>{const h=ui(undefined,undefined,true,false);assert.equal(h.layers.length,0);assert.equal(h.el('show-radar').checked,true);h.ready();await new Promise(r=>setImmediate(r));assert.equal(h.layers.length,1);h.off();h.ready();await new Promise(r=>setImmediate(r));assert.equal(h.layers.length,1);assert.equal(h.layers[0].removed,true)});

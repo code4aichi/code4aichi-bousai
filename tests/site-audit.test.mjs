@@ -12,9 +12,9 @@ test('source page is served under portal mount and credits provider-specific ter
  assert.match(html,/KMZ原本の利用条件は確認中/);assert.match(html,/一括適用したとは扱いません/);
  assert.equal((await worker.fetch(new Request('https://code4aichi.org/data-sources.html'),env,{})).status,404);
 });
-test('historical earthquake markers are opt-in and map attribution uses canonical OSM tiles',()=>{
+test('historical earthquake markers are enabled by request, retain history label and canonical map credit',()=>{
  const html=read('index.html'),earthquake=html.match(/<input[^>]*id="show-earthquakes"[^>]*>/)?.[0];
- assert.ok(earthquake);assert.doesNotMatch(earthquake,/\bchecked\b/);assert.match(html,/地震の震源（発表履歴）/);
+ assert.ok(earthquake);assert.match(earthquake,/\bchecked\b/);assert.match(html,/地震の震源（発表履歴）/);
  assert.match(read('app.js'),/https:\/\/tile\.openstreetmap\.org\/\{z\}\/\{x\}\/\{y\}\.png/);
  assert.match(read('app.js'),/https:\/\/www.openstreetmap.org\/copyright/);
 });
