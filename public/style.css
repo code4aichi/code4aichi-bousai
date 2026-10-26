@@ -173,3 +173,12 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 .portal-disclosure>summary:focus-visible{outline:3px solid #087c80;outline-offset:-3px}
 #rain-overview,#water-overview{scroll-margin-top:16px}
 @media(max-width:800px){.portal-disclosure>summary{padding:10px 12px;min-height:54px}.portal-disclosure>.rain-panel,.portal-disclosure>.water-panel{padding:12px}}
+
+/* Keep the legend, map actions and status messages on separate rows at every width. */
+.v2-map-head{display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;align-items:start;gap:6px}
+.v2-map-head .map-legend{width:100%;min-width:0;gap:4px 14px}
+.map-action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0;width:100%}
+.v2-map-head .map-action-row button{min-width:0;width:100%;min-height:44px;white-space:normal;overflow-wrap:anywhere;margin:0;padding:7px 8px;line-height:1.4}
+.map-status-row{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;min-width:0}
+.v2-map-head .map-status-row>span{min-width:0;overflow-wrap:anywhere}
+.map-action-row>[hidden],.map-status-row>[hidden]{display:none!important}
