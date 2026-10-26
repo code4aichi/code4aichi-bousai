@@ -16,3 +16,10 @@ export function radarTileURL(frame){
  if(!radarTime(frame?.basetime)||!radarTime(frame?.validtime)||frame.basetime!==frame.validtime)throw Error('Invalid radar frame');
  return `https://www.jma.go.jp/bosai/jmatile/data/nowc/${frame.basetime}/none/${frame.validtime}/surf/hrpns/{z}/{x}/{y}.png`;
 }
+export function radarCandidates(now=Date.now()){
+ const latest=Math.floor(now/300000)*300000;
+ return [0,1,2].map(i=>{
+  const validAt=new Date(latest-i*300000).toISOString(),stamp=validAt.replace(/[-:TZ.]/g,'').slice(0,14);
+  return {basetime:stamp,validtime:stamp,validAt:radarTime(stamp)};
+ }).filter(f=>radarFresh(f,now));
+}

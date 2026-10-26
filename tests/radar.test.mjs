@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {radarTime,selectRadarFrame,radarTileURL,radarFresh,RADAR_TIMES} from '../public/radar-model.mjs';
+import {radarTime,selectRadarFrame,radarTileURL,radarFresh,radarCandidates,RADAR_TIMES} from '../public/radar-model.mjs';
 import {radarData} from '../src/radar.js';
-import {initRadar} from '../public/radar.mjs';
+import {initRadar,verifyRadarImage} from '../public/radar.mjs';
 const stamp='20261026071000',now=Date.parse('2026-10-26T07:15:00Z');
 const row={basetime:stamp,validtime:stamp,elements:['hrpns']},frame=selectRadarFrame([row],now);
 test('only fresh observed precipitation frames qualify; invalid dates and forecasts never become observations',()=>{
@@ -14,13 +14,13 @@ test('metadata fetch uses the fixed official endpoint and rejects HTTP errors an
  let requested;const d=await radarData(async u=>{requested=u;return Response.json([row])},now);assert.equal(requested,RADAR_TIMES);assert.equal(d.frame.validtime,stamp);
  await assert.rejects(()=>radarData(async()=>new Response('',{status:503}),now));await assert.rejects(()=>radarData(async()=>Response.json([row]),now+3600000));
 });
-function ui(fetcher=async()=>Response.json({ok:true,frame})){
+function ui(fetcher=async()=>Response.json({ok:true,frame}),ImageClass){
  const els=new Map(['show-radar','radar-status','radar-map-badge','radar-refresh'].map(id=>[id,{checked:false,disabled:false,hidden:false,dataset:{},events:{},addEventListener(e,f){this.events[e]=f}}]));
  const layers=[],timers=[],events={};let clock=now;
  const map={getPane:()=>({}),createPane:()=>({style:{}})};
  const leaflet={TileLayer:{prototype:{_clampZoom:z=>z},extend(methods){return function(url,options){const l={url,options,events:{},on(e,f){this.events[e]=f;return this},addTo(){layers.push(this);return this},remove(){this.removed=true}};Object.assign(l,methods);return l}}}};
  const doc={getElementById:id=>els.get(id),addEventListener(e,f){events[e]=f}};
- const h=initRadar({doc,win:{bousaiMap:map,addEventListener(){}},leaflet,fetcher,now:()=>clock,timer:f=>timers.push(f)});
+ const h=initRadar({doc,win:{bousaiMap:map,Image:ImageClass,addEventListener(){}},leaflet,fetcher,now:()=>clock,timer:f=>timers.push(f)});
  return {...h,el:id=>els.get(id),layers,timers,clock:t=>clock=t,enable(){els.get('show-radar').checked=true;return els.get('show-radar').events.change()},off(){els.get('show-radar').checked=false;els.get('show-radar').events.change()}};
 }
 test('initially off; explicit enable adds only the radar layer without moving or zooming the map',async()=>{
@@ -34,4 +34,21 @@ test('disabling during metadata fetch cannot recreate the layer after the respon
 });
 test('expired frames are removed, and late tile events cannot restore the old status',async()=>{
  const h=ui();await h.enable();h.clock(now+16*60000);h.timers[0]();assert.equal(h.layers[0].removed,true);h.layers[0].events.load();assert.equal(h.el('radar-status').dataset.fetchState,'failed');
+});
+
+test('fallback candidates are bounded, ordered, recent UTC observation times',()=>{
+ const c=radarCandidates(now);assert.equal(c.length,3);assert.equal(c[0].validtime,'20261026071500');assert.equal(c[2].validtime,'20261026070500');for(const f of c)assert.equal(radarFresh(f,now),true);
+});
+test('failed metadata can display only an actually loaded image and remains partial',async()=>{
+ let attempts=0;
+ class Img{naturalWidth=256;naturalHeight=256;set src(value){if(!value)return;attempts++;queueMicrotask(()=>attempts===1?this.onerror?.():this.onload?.())}}
+ const h=ui(async()=>new Response('',{status:502}),Img);await h.enable();assert.equal(attempts,2);assert.equal(h.layers.length,1);assert.match(h.layers[0].url,/20261026071000/);h.layers[0].events.load();assert.equal(h.el('radar-status').dataset.fetchState,'partial');assert.match(h.el('radar-status').textContent,/画像公開確認/);
+});
+test('unavailable or wrong-sized probe images never create a radar layer',async()=>{
+ let attempts=0;class Img{naturalWidth=1;naturalHeight=1;set src(value){if(!value)return;attempts++;queueMicrotask(()=>this.onload?.())}}
+ const h=ui(async()=>{throw Error()},Img);await h.enable();assert.equal(attempts,3);assert.equal(h.layers.length,0);assert.equal(h.el('radar-status').dataset.fetchState,'failed');
+});
+test('aborting a pending image probe cannot leave the request waiting or recreate a layer',async()=>{
+ class Img{set src(value){}}
+ const controller=new AbortController();const pending=verifyRadarImage(frame,{ImageClass:Img,signal:controller.signal});controller.abort();await assert.rejects(pending,/Aborted/);
 });
