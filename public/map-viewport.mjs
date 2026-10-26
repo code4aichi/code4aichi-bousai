@@ -1,10 +1,12 @@
-// Use a compact overview on mobile; retain the established desktop view.
-export const NATIONAL_BOUNDS=[[24,123],[46,146]];
-export function fitNation(map,mobile=false){
+// The enlarged frame keeps the national overview at the established zoom.
+export const NATIONAL_BOUNDS=[[20,122],[46,154]];
+export function fitNation(map){
  map.stop();
  map.invalidateSize({pan:true,animate:false});
- if(mobile)map.fitBounds(NATIONAL_BOUNDS,{padding:[12,12],animate:false});
- else map.setView([37.6,137.5],5,{animate:false});
+ // Enlarge the frame instead of zooming out; centre the north/south extent.
+ map.setView([34.05,138],5,{animate:false});
+ const viewport=map.getContainer?.().parentElement;
+ if(viewport?.classList.contains("map-viewport"))viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
 }
 export function observeMapSize(map,element,win=window){
  let frame;

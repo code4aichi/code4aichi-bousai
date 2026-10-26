@@ -142,3 +142,16 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .mobile-region-list #region-browser{height:618px;display:flex;flex-direction:column;min-height:0}
  .mobile-region-list .v2-list{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto}
 }
+
+/* v5.2.4: enlarge the frame, keep the national overview at zoom 5. */
+.map-viewport{order:1;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;width:100%;overscroll-behavior-x:contain}
+.map-viewport #map-canvas{width:100%;min-width:760px;height:100%;min-height:760px}
+.v2-map-shell{height:960px;min-height:960px}
+.v2-map-area{min-height:0}
+@media(min-width:801px){.mobile-region-list #region-browser{height:958px}}
+@media(max-width:800px){
+ .v2-map-shell{height:auto;min-height:0}
+ .v2-map-area{height:auto;min-height:0}
+ .map-viewport{height:760px;min-height:760px;flex:none}
+ .v2-map-area .map-viewport #map-canvas{height:760px;min-height:760px;width:100%;min-width:760px;flex:none}
+}

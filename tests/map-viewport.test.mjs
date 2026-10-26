@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fitNation,observeMapSize,NATIONAL_BOUNDS} from '../public/map-viewport.mjs';
-test('desktop reset retains its established centre and zoom; mobile fits the overview',()=>{
+test('national reset retains zoom 5 on desktop and mobile with an enlarged frame',()=>{
  const calls=[];const map={stop(){},invalidateSize(){},fitBounds:(...a)=>calls.push(['bounds',...a]),setView:(...a)=>calls.push(['view',...a])};
- fitNation(map);assert.deepEqual(calls[0],['view',[37.6,137.5],5,{animate:false}]);
- fitNation(map,true);assert.deepEqual(calls[1],['bounds',NATIONAL_BOUNDS,{padding:[12,12],animate:false}]);
+ fitNation(map);assert.deepEqual(calls[0],['view',[34.05,138],5,{animate:false}]);
+ fitNation(map,true);assert.deepEqual(calls[1],['view',[34.05,138],5,{animate:false}]);
 });
 test('size observer does not reposition on load or call setView during resize',()=>{
  let cb,frame=null,disconnected=false,size={width:360,height:280};const calls=[];
