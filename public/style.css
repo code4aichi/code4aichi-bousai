@@ -143,7 +143,7 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .mobile-region-list .v2-list{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto}
 }
 
-/* v5.2.5: enlarge only the mobile frame. */
+/* v5.2.6: compact mobile frame; desktop remains 620px. */
 .map-viewport{order:1;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;width:100%;overscroll-behavior-x:contain}
 .map-viewport #map-canvas{width:100%;min-width:0;height:100%;min-height:0}
 .v2-map-shell{height:620px;min-height:620px}
@@ -152,6 +152,6 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 @media(max-width:800px){
  .v2-map-shell{height:auto;min-height:0}
  .v2-map-area{height:auto;min-height:0}
- .map-viewport{height:760px;min-height:760px;flex:none}
- .v2-map-area .map-viewport #map-canvas{height:760px;min-height:760px;width:100%;min-width:760px;flex:none}
+ .map-viewport{height:380px;height:clamp(320px,52svh,460px);min-height:0;flex:none;overflow:hidden}
+ .v2-map-area .map-viewport #map-canvas{height:100%;min-height:0;width:100%;min-width:0;flex:none}
 }
