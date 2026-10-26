@@ -8,7 +8,7 @@ let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,last
 const category=i=>Number(i.level)||0;
 const rainCodes=new Set(['03','10','33','43']),floodCodes=new Set(['04','18','34','44']);
 const mapItems=items=>items.filter(i=>!$('rain-map-filter')?.value||($('rain-map-filter').value==='rain'?rainCodes:floodCodes).has(i.code));
-window.bousaiRainState=()=>({loaded,areaOk,retrievedAt:lastTime,points:(window.bousaiLocations?.()||[]).map(p=>({id:p.id,name:p.name,prefecture:p.prefecture,checked:!!(loaded&&areaOk&&matchById.has(p.id)&&resultsFor(p)?.ok),items:alertsFor(p,true)}))});
+window.bousaiRainState=()=>({loaded,areaOk,retrievedAt:lastTime,points:(window.bousaiLocations?.()||[]).map(p=>({id:p.id,name:p.name,prefecture:p.prefecture,areaCode:areaOk?matchById.get(p.id)||null:null,checked:!!(loaded&&areaOk&&matchById.has(p.id)&&resultsFor(p)?.ok),items:alertsFor(p,true)}))});
 const itemsAllowed=items=>items.filter(x=>category(x)>=($('show-advisories')?.checked?1:2));
 const resultsFor=p=>{const m=regionMatches.get(p.id);return m?.status==='matched'?results.find(x=>x.office===m.officeCode):null};
 const setText=(id,val)=>{const e=$(id);if(e)e.textContent=String(val)};

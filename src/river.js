@@ -14,6 +14,15 @@ export function parseRiverReport(s,url){
  const r=xml(s).Report,c=r?.Control,h=r?.Head;
  if(!riverURL(url)||text(c?.Title)!=='指定河川洪水予報'||text(h?.InfoKind)!=='指定河川洪水予報'||!date(c.DateTime)||!date(h.ReportDateTime)||!text(h.Title))throw Error('Invalid flood bulletin');
  const regions=arr(h.Headline?.Information).flatMap(info=>arr(info.Item).flatMap(i=>arr(i.Areas).flatMap(a=>arr(a.Area).map(v=>({name:text(v.Name),code:text(v.Code),type:text(a['@_codeType']),category:text(i.Kind?.Name)}))))).filter(a=>a.name);
+ const cityMap=new Map();
+ for(const warning of arr(r.Body?.Warning))for(const item of arr(warning.Item)){
+  if(text(item.Kind?.Name)!=='浸水想定地区')continue;
+  for(const area of arr(item.Areas).flatMap(a=>arr(a.Area))){
+   const code=text(area.CityCode),name=text(area.City),prefecture=text(area.Prefecture);
+   if(/^\d{7}$/.test(code)&&name&&prefecture)cityMap.set(code,{code,name,prefecture});
+  }
+ }
+ const municipalities=[...cityMap.values()];
  const levels=[];
  for(const infos of arr(r.Body?.MeteorologicalInfos).filter(i=>i['@_type']==='水位・流量情報'))for(const series of arr(infos.TimeSeriesInfo)){
   const times=new Map(arr(series.TimeDefines?.TimeDefine).map(t=>[String(t['@_timeId']),t]));
@@ -24,7 +33,7 @@ export function parseRiverReport(s,url){
    levels.push({station:text(item.Station?.Name),location:text(item.Station?.Location),time:date(time.DateTime),value:text(level),unit:'m'});
   }
  }
- return {title:text(h.Title),reportedAt:date(h.ReportDateTime),updatedAt:date(c.DateTime),status:text(c.Status),infoType:text(h.InfoType),eventId:text(h.EventID),office:text(c.PublishingOffice),headline:text(h.Headline?.Text),sourceURL:riverURL(url),regions,levels};
+ return {title:text(h.Title),reportedAt:date(h.ReportDateTime),updatedAt:date(c.DateTime),status:text(c.Status),infoType:text(h.InfoType),eventId:text(h.EventID),office:text(c.PublishingOffice),headline:text(h.Headline?.Text),sourceURL:riverURL(url),regions,municipalities,levels};
 }
 async function read(url,ttl,fetcher){const r=await fetcher(url,{redirect:'error',headers:{Accept:'application/xml'},signal:AbortSignal.timeout(8000),cf:{cacheTtl:ttl,cacheEverything:true}});if(!r.ok)throw Error('JMA unavailable');return r.text()}
 export async function riverData(fetcher=fetch){
