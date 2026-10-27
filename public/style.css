@@ -196,3 +196,8 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 .flood-hazard-controls select{width:100%;max-width:100%;min-height:44px;padding:8px;border:1px solid #bfd7d1;border-radius:8px;background:white;color:#173044;font:inherit;font-size:13px}.flood-hazard-controls label[for]{min-height:auto;margin:4px 0;font-size:12px}
 
 .evacuation-panel label{display:block;font-size:12px;font-weight:700;margin:6px 0}.evacuation-panel select{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid #bfd7d1;border-radius:8px;background:white;color:#173044;font:inherit;font-size:13px}.evacuation-panel small{display:block;margin-top:8px;overflow-wrap:anywhere}.evacuation-panel small a{text-decoration:underline;color:#135d59}.evacuation-panel .detail-jump{width:fit-content}.evacuation-panel .detail-jump[hidden]{display:none}
+
+/* v5.17: a taller map frame and a prominent, compact guide entrance. */
+@media(min-width:801px){.v2-map-shell{height:880px;min-height:880px}.mobile-region-list #region-browser{height:878px}}
+@media(max-width:800px){.map-viewport{height:440px;height:clamp(380px,60svh,520px)}}
+.guide-entry{display:flex;align-items:center;gap:12px;padding:11px 14px;margin:0 0 14px;border:1px solid #a5cfc9;border-radius:10px;background:#eaf7f3;color:#155c56}.guide-entry>span:first-child{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:50%;background:#17635c;color:#fff;font-weight:800}.guide-entry>span:nth-child(2){flex:1;min-width:0}.guide-entry strong,.guide-entry small{display:block}.guide-entry strong{font-size:14px}.guide-entry small{font-size:12px;color:#405e65;line-height:1.5}.guide-entry:hover{background:#ddf1eb}.guide-entry:focus-visible{outline:3px solid #17635c;outline-offset:2px}

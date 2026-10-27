@@ -27,7 +27,7 @@ export function initRadar({doc=document,win=window,leaflet=globalThis.L,fetcher=
   const context=isPast?'過去の実況（現在の雨雲ではありません） ／ ':'';
   const shown=()=>say(`雨雲（実況） ${timestamp} ／ ${context}${via}${tileFailed?'画像の一部取得失敗・未確認':'画像読込完了（透明部の状況は判定しません）'}`,tileFailed||via?'partial':'ok');
   const RadarLayer=leaflet.TileLayer.extend({_clampZoom(zoom){const z=leaflet.TileLayer.prototype._clampZoom.call(this,zoom);return z===undefined?z:Math.floor(z/2)*2}});
-  layer=new RadarLayer(radarTileURL(frame),{pane:'rain-radar',opacity:.65,maxNativeZoom:10,maxZoom:19,minZoom:4,bounds:[[20,118],[48,150]],noWrap:true,updateWhenIdle:true,keepBuffer:1,attribution:'雨雲：<a href="https://www.jma.go.jp/bosai/nowc/">気象庁</a>（重ね合わせ）'});
+  layer=new RadarLayer(radarTileURL(frame),{pane:'rain-radar',opacity:.65,minNativeZoom:4,maxNativeZoom:10,maxZoom:19,minZoom:2,bounds:[[20,118],[48,150]],noWrap:true,updateWhenIdle:true,keepBuffer:1,attribution:'雨雲：<a href="https://www.jma.go.jp/bosai/nowc/">気象庁</a>（重ね合わせ）'});
   layer.on('tileerror',()=>{if(id!==sequence||!toggle.checked)return;tileFailed=true;shown()});
   layer.on('load',()=>{if(id===sequence&&toggle.checked)shown()});
   say(`雨雲（実況） ${timestamp} ／ ${context}${via}画像を読み込んでいます…`,'loading');layer.addTo(map);

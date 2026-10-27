@@ -1,15 +1,12 @@
 // The enlarged frame keeps the national overview at the established zoom.
 export const NATIONAL_BOUNDS=[[20,122],[46,154]];
-export function fitHome(map){
- map.stop();map.invalidateSize({pan:true,animate:false});map.setView([35.1,137],5,{animate:false});
-}
+export function fitHome(map){fitNation(map)}
 export function fitNation(map){
- map.stop();
- map.invalidateSize({pan:true,animate:false});
- // Enlarge the frame instead of zooming out; centre the north/south extent.
- map.setView([34.05,138],5,{animate:false});
+ map.stop();map.invalidateSize({pan:true,animate:false});
+ // Fit all four cardinal extremes, including remote islands, to the actual frame.
+ map.fitBounds(NATIONAL_BOUNDS,{padding:[24,32],maxZoom:5,animate:false});
  const viewport=map.getContainer?.().parentElement;
- if(viewport?.classList.contains("map-viewport"))viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
+ if(viewport?.classList.contains('map-viewport'))viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
 }
 export function observeMapSize(map,element,win=window){
  let frame;
