@@ -4,7 +4,7 @@ export function fitHome(map){fitNation(map)}
 export function fitNation(map){
  map.stop();map.invalidateSize({pan:true,animate:false});
  // Remote outlying islands lie outside this overview; users can pan to them.
- map.fitBounds(NATIONAL_BOUNDS,{padding:[12,16],maxZoom:5,animate:false});
+ map.fitBounds(NATIONAL_BOUNDS,{padding:[8,8],maxZoom:5.5,animate:false});
  const viewport=map.getContainer?.().parentElement;
  if(viewport?.classList.contains('map-viewport'))viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
 }

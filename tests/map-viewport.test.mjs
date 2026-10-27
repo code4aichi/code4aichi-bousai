@@ -4,7 +4,7 @@ import {fitNation,fitHome,observeMapSize,NATIONAL_BOUNDS} from '../public/map-vi
 test('initial and national views fit main Japan and inhabited island groups to the frame',()=>{
  const calls=[];const map={stop(){},invalidateSize(){},fitBounds:(...a)=>calls.push(a)};
  fitNation(map);fitHome(map);
- for(const call of calls){assert.deepEqual(call,[NATIONAL_BOUNDS,{padding:[12,16],maxZoom:5,animate:false}]);}
+ for(const call of calls){assert.deepEqual(call,[NATIONAL_BOUNDS,{padding:[8,8],maxZoom:5.5,animate:false}]);}
  assert.equal(calls.length,2);
 });
 test('size observer does not reposition on load or call setView during resize',()=>{
