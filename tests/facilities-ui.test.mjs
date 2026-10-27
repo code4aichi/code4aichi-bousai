@@ -11,7 +11,7 @@ async function ui(failed=false,missing=[],storage=null){
  const fields=new Map(),listeners={},requests=[];
  const element=id=>{if(!fields.has(id))fields.set(id,{value:'',checked:false,disabled:false,textContent:'',innerHTML:'',hidden:true,dataset:{},append(){},addEventListener:(event,fn)=>listeners[id+':'+event]=fn,querySelectorAll:()=>[],focus(){},click(){}});return fields.get(id)};
  const values=new Map();
- const window={localStorage:storage||{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)}};
+ const window={bousaiSavedRegionMemo:()=>({available:true,regions:[]}),localStorage:storage||{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)}};
  const ctx=vm.createContext({FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,selectedFacilitySummary,inFacilityBounds,buildFacilityMemo,createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity,window,Map,Date,Intl,Number,String,Math,setTimeout,clearTimeout,setInterval(){},document:{getElementById:element,createElement:()=>({click(){}}),addEventListener:(event,fn)=>listeners[event]=fn},fetch:async url=>{requests.push(url);return failed||missing.includes(url.includes('yokohama')?'yokohama':'nagoya')?new Response('',{status:503}):Response.json(url.includes('yokohama')?yokohama:data)}});
  vm.runInContext(fs.readFileSync(new URL('../public/facilities.mjs',import.meta.url),'utf8').replace(/^(?:import .*\n)+/,''),ctx);for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));return {element,listeners,window,requests,copyFacility:ctx.copyFacility,toggleSavedFacility:ctx.toggleSavedFacility,removeSavedFacility:ctx.removeSavedFacility};
 }
@@ -61,4 +61,11 @@ test('saved manager remains available when both facility datasets fail',async()=
 });
 test('failed removal does not hide a saved facility or claim success',async()=>{
  const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},f=parseProviderFacilities('nagoya',data)[0];createFacilityFavorites(storage).toggle(f);const h=await ui(false,[],storage);storage.setItem=()=>{throw Error('blocked')};h.removeSavedFacility(f);assert.match(h.element('facility-saved-manager-status').textContent,/解除できません/);assert.match(h.element('facility-saved-manager-title').textContent,/1件/);
+});
+
+test('memo can export saved regions without saved facilities',async()=>{
+ const h=await ui();h.window.bousaiSavedRegionMemo=()=>({available:true,regions:[{name:'豊田市',prefecture:'愛知',checks:{}}]});let blob;h.window.Blob=Blob;h.window.URL={createObjectURL:b=>{blob=b;return 'blob:test'},revokeObjectURL(){}};h.element('facility-save-memo').onclick();assert.match(await blob.text(),/豊田市/);assert.match(h.element('facility-action-status').textContent,/地域1件・施設0件/);
+});
+test('memo does not silently omit unavailable saved-region storage',async()=>{
+ const h=await ui();h.window.bousaiSavedRegionMemo=()=>({available:false,regions:[]});h.element('facility-save-memo').onclick();assert.match(h.element('facility-action-status').textContent,/地域を読み込めません/);
 });

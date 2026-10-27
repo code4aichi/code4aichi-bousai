@@ -71,6 +71,7 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  const {createFavorites}=await import('/mieru-bosai/favorites.mjs?v=4.2.0');
  let storage;try{storage=window.localStorage}catch{storage={getItem(){throw new Error('Storage unavailable')},setItem(){throw new Error('Storage unavailable')}}}
  favorites=createFavorites(storage,locations);
+ window.bousaiSavedRegionMemo=()=>{const snapshot=createFavorites(storage,locations);return {available:snapshot.available(),regions:snapshot.all().map(p=>({name:p.name,prefecture:p.prefecture,checks:linkRegistry?.resolveRegionLinks(p).checks||{}}))}};
  setupWithoutMap();
  if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();window.bousaiMapReady=true;document.dispatchEvent(new Event('bousai:map-ready'));return}
  mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.7.0');

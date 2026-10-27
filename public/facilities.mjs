@@ -1,4 +1,4 @@
-import {buildFacilityMemo} from './facility-memo.mjs';
+import {buildFacilityMemo} from './facility-memo.mjs?v=5.11.0';
 import {createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity} from './facility-favorites.mjs';
 import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,selectedFacilitySummary,inFacilityBounds} from './facility-model.mjs?v=5.9.0';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,13 +25,13 @@ function removeSavedFacility(entry){
 function downloadFacilityMemo(){
  const status=$('facility-action-status');
  if(!savedFacilities.reload()){renderSavedManager();status.textContent='保存した施設を読み込めません。ブラウザの保存設定をご確認ください。';return}
- renderSavedManager();const saved=savedFacilities.entries();if(!saved.length){status.textContent='先に一覧から給水施設を保存してください。';return}
+ renderSavedManager();if(!window.bousaiSavedRegionMemo){status.textContent='保存した地域の読み込み準備ができていません。ページを再読み込みしてください。';return}const saved=savedFacilities.entries(),regionData=window.bousaiSavedRegionMemo();if(regionData&&!regionData.available){status.textContent='保存した地域を読み込めません。ブラウザの保存設定をご確認ください。';return}const regions=regionData?.regions||[];if(!saved.length&&!regions.length){status.textContent='先に一覧から地域または給水施設を保存してください。';return}
  let url;
  try{
-  const html=buildFacilityMemo(saved,facilities,{sources:Object.fromEntries(loadedSources.map(s=>[s.id,s.data.source||{}]))});
+  const html=buildFacilityMemo(saved,facilities,{sources:Object.fromEntries(loadedSources.map(s=>[s.id,s.data.source||{}])),regions});
   url=window.URL.createObjectURL(new window.Blob([html],{type:'text/html;charset=utf-8'}));
-  const link=document.createElement('a');link.href=url;link.download='mieru-bosai-saved-facilities.html';link.click();
-  status.textContent=`保存した施設${saved.length}件のメモのダウンロードを開始しました。ファイルを開くと通信なしで閲覧・印刷できます。`;
+  const link=document.createElement('a');link.href=url;link.download='mieru-bosai-bousai-memo.html';link.click();
+  status.textContent=`保存した地域${regions.length}件・施設${saved.length}件のメモのダウンロードを開始しました。ファイルを開くと通信なしで閲覧・印刷できます。`;
  }catch{status.textContent='メモを作成できませんでした。このブラウザのダウンロード設定をご確認ください。'}
  finally{if(url)setTimeout(()=>window.URL.revokeObjectURL(url),1000)}
 }
