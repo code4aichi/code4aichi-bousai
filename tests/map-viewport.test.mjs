@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fitNation,fitHome,observeMapSize,NATIONAL_BOUNDS} from '../public/map-viewport.mjs';
-test('initial and national views fit all national bounds to the frame',()=>{
+test('initial and national views fit main Japan and inhabited island groups to the frame',()=>{
  const calls=[];const map={stop(){},invalidateSize(){},fitBounds:(...a)=>calls.push(a)};
  fitNation(map);fitHome(map);
- for(const call of calls){assert.deepEqual(call,[NATIONAL_BOUNDS,{padding:[24,32],maxZoom:5,animate:false}]);}
+ for(const call of calls){assert.deepEqual(call,[NATIONAL_BOUNDS,{padding:[12,16],maxZoom:5,animate:false}]);}
  assert.equal(calls.length,2);
 });
 test('size observer does not reposition on load or call setView during resize',()=>{

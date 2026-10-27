@@ -1,10 +1,10 @@
-// The enlarged frame keeps the national overview at the established zoom.
-export const NATIONAL_BOUNDS=[[20,122],[46,154]];
+// Fit Japan’s main islands, Nansei islands and Ogasawara to the frame.
+export const NATIONAL_BOUNDS=[[24,122.5],[46,147]];
 export function fitHome(map){fitNation(map)}
 export function fitNation(map){
  map.stop();map.invalidateSize({pan:true,animate:false});
- // Fit all four cardinal extremes, including remote islands, to the actual frame.
- map.fitBounds(NATIONAL_BOUNDS,{padding:[24,32],maxZoom:5,animate:false});
+ // Remote outlying islands lie outside this overview; users can pan to them.
+ map.fitBounds(NATIONAL_BOUNDS,{padding:[12,16],maxZoom:5,animate:false});
  const viewport=map.getContainer?.().parentElement;
  if(viewport?.classList.contains('map-viewport'))viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
 }
