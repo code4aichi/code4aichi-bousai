@@ -4,7 +4,9 @@
 const {buildRegionMatches}=await import('/mieru-bosai/region-match.mjs?v=4.3.0');
 const $=id=>document.getElementById(id);
 const clean=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let staleShown=false;
 let results=[],areaTable=null,matchById=new Map(),loaded=false,areaOk=false,lastTime=null,fetching=false,regionMatches=new Map(),areaRetrievedAt=null;
+const fresh=()=>{const t=Date.parse(lastTime),age=Date.now()-t;return loaded&&Number.isFinite(t)&&age>=-60000&&age<=600000};
 const category=i=>Number(i.level)||0;
 const rainCodes=new Set(['03','10','33','43']),floodCodes=new Set(['04','18','34','44']);
 const mapItems=items=>items.filter(i=>!$('rain-map-filter')?.value||($('rain-map-filter').value==='rain'?rainCodes:floodCodes).has(i.code));
@@ -17,7 +19,7 @@ const pointCount=()=>window.bousaiLocations?.().length||0;
 function updateMetrics(){
  const okCount=results.filter(r=>r.ok).length;
  const affected=(window.bousaiLocations?.()||[]).filter(p=>alertsFor(p,true).length>0).length;
- setText('alert-impacted',loaded&&areaOk?`${affected.toLocaleString()} 地点`:'未確認');
+ setText('alert-impacted',fresh()&&areaOk?`${affected.toLocaleString()} 地点`:'未確認');
  setText('alert-matched',areaOk?`${matchById.size.toLocaleString()} / ${pointCount().toLocaleString()} 地点`:'未確認');
  setText('alert-offices',loaded?`${okCount} / 58 発表区域`:'未確認');
  setText('alert-updated',loaded?formatDate(lastTime):'未確認');
@@ -43,26 +45,30 @@ function alertsFor(p,ignoreAdvisories=false){
  const current=(office.items||[]).filter(i=>Array.isArray(i.areas)&&i.areas.includes(code));
  return ignoreAdvisories?current:itemsAllowed(current);
 }
-window.bousaiSeverity=p=>($('show-alerts')?.checked&&loaded&&areaOk)?Math.max(0,...mapItems(alertsFor(p)).map(category)):0;
+window.bousaiSeverity=p=>($('show-alerts')?.checked&&fresh()&&areaOk)?Math.max(0,...mapItems(alertsFor(p)).map(category)):0;
 window.bousaiBadge=p=>{const lvl=window.bousaiSeverity(p);return lvl?`<b class="mini-alert level-${lvl}" title="この自治体に警報・注意報の発表あり">!</b>`:'⌖'};
 function updateDetails(){
  const el=$('detail-alerts'),p=window.bousaiCurrentSelection?.();if(!el||!p)return;
  updateRegionIdentity(p);
  const office=resultsFor(p);
  if(!loaded){el.textContent=fetching?'気象庁データを取得しています。':'警報情報を取得できていません。現在の状況は未確認です。気象庁の公式情報をご確認ください。';return}
+ if(!fresh()){el.textContent=`警報情報の取得時刻が古いか確認できません（前回取得：${formatDate(lastTime)}）。現在の状況は未確認です。気象庁の公式情報をご確認ください。`;return}
  if(!areaOk){el.textContent='地域コード表が取得できないため、自治体単位の判定はできません。';return}
  if(!matchById.has(p.id)){el.textContent='この地点と気象庁の市町村相当区域の対応は未確認です。警報の有無は未判定です。';return}
  if(!office?.ok){el.textContent='この発表区域の情報を取得できませんでした。警報の有無は未確認です。';return}
  const active=alertsFor(p,true);
  const reportDate=office.reportDatetime?formatDate(office.reportDatetime):'未取得';
- el.innerHTML=active.length?`<ul>${active.map(i=>`<li><strong>${clean(i.name)}</strong> <span class="alert-status-name">${clean(i.statuses?.join(' / ')||'発表情報あり')}</span></li>`).join('')}</ul><p class="alert-note">気象庁発表：${clean(reportDate)} ／ 市区町村相当区域で照合</p>`:'<p>取得した発表情報に、該当区域の警報・注意報は含まれていません。ただし安全を保証する表示ではありません。</p>';
+ el.innerHTML=active.length?`<ul>${active.map(i=>`<li><strong>${clean(i.name)}</strong> <span class="alert-status-name">${clean(i.statuses?.join(' / ')||'発表情報あり')}</span></li>`).join('')}</ul><p class="alert-note">気象庁発表：${clean(reportDate)} ／ 取得：${clean(formatDate(lastTime))} ／ 市区町村相当区域で照合</p>`:`<p>取得した発表情報に、該当区域の警報・注意報は含まれていません。ただし安全を保証する表示ではありません。</p><p class="alert-note">取得：${clean(formatDate(lastTime))} ／ 市区町村相当区域で照合</p>`;
+}
+function markStale(){
+ if(!loaded||fresh()||staleShown)return;staleShown=true;const status=$('alert-status');status.className='alert-status partial';$('alert-summary').textContent=`気象情報の取得時刻が古いか不明です（前回取得：${formatDate(lastTime)}）。最新の状況は未確認です。`;updateMetrics();render();
 }
 function render(){
  window.bousaiRerender?.();updateDetails();document.dispatchEvent(new Event('bousai:rain-update'));
  const panel=$('alert-region-list');if(!panel)return;panel.replaceChildren();
  const note=$('alert-list-note');
  if(!$('show-alerts')?.checked){if(note)note.textContent='地図上のアラート表示はオフです';return}
- if(!loaded||!areaOk){if(note)note.textContent='自治体別情報は未確認です';return}
+ if(!fresh()||!areaOk){if(note)note.textContent='自治体別情報は未確認です';return}
  const points=(window.bousaiLocations?.()||[]).filter(p=>window.bousaiSeverity(p)>0);
  if(note)note.textContent=points.length?`${points.length.toLocaleString()}件の対象地点（先頭35件を表示）`:'対象地点は確認されていません。取得状況を確認してください';
  const shown=points.slice(0,35);
@@ -83,7 +89,7 @@ async function fetchData(){
   const failed=58-results.filter(x=>x.ok).length;
    status.classList.add(failed||!areaOk?'partial':'ok');
   $('alert-summary').textContent=areaOk?`気象警報・注意報 · ${formatDate(lastTime)}取得 · 5分ごとに更新${failed?' · 一部地域は未確認':''}`:'地域コード表を取得できません。自治体ごとの警報は未確認です。';
-  updateMetrics();render();
+  staleShown=false;updateMetrics();render();markStale();
  }catch(e){loaded=false;results=[];areaOk=false;matchById.clear();lastTime=null;areaTable=null;matchLocations();status.classList.add('failed');$('alert-summary').textContent='警報データを取得できません。現在の警報状態は未確認です。気象庁の公式発表をご確認ください。';updateMetrics();render()}
  finally{fetching=false;$('refresh-alerts').disabled=false;updateDetails()}
 }
@@ -94,6 +100,9 @@ async function init(){if(initialized||!window.bousaiLocations)return;initialized
  $('show-alerts').onchange=render;$('show-advisories').onchange=render;
  document.addEventListener('bousai:selection',updateDetails);
  await fetchData();setInterval(fetchData,5*60*1000);
+ setInterval(markStale,30000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!fresh())fetchData()});
+ window.addEventListener?.('online',()=>{if(!fresh())fetchData()});
 }
 document.addEventListener('bousai:map-ready',init,{once:true});
 if(window.bousaiLocations?.().length)init();
