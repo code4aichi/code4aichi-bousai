@@ -69,3 +69,11 @@ test('memo can export saved regions without saved facilities',async()=>{
 test('memo does not silently omit unavailable saved-region storage',async()=>{
  const h=await ui();h.window.bousaiSavedRegionMemo=()=>({available:false,regions:[]});h.element('facility-save-memo').onclick();assert.match(h.element('facility-action-status').textContent,/地域を読み込めません/);
 });
+
+test('saved regions panel exports the same memo and reports result in place',async()=>{
+ const h=await ui();h.window.bousaiSavedRegionMemo=()=>({available:true,regions:[{name:'豊田市',prefecture:'愛知',checks:{}}]});h.listeners['bousai:saved-regions-change']();assert.match(h.element('saved-memo-counts').textContent,/地域1件.*施設0件/);
+ let blob;h.window.Blob=Blob;h.window.URL={createObjectURL:b=>{blob=b;return 'blob:test'},revokeObjectURL(){}};h.element('saved-region-memo').onclick();assert.match(await blob.text(),/豊田市/);assert.match(h.element('saved-memo-status').textContent,/地域1件・施設0件/);
+});
+test('quick memo reports unavailable region storage without exporting',async()=>{
+ const h=await ui();h.window.bousaiSavedRegionMemo=()=>({available:false,regions:[]});h.listeners['bousai:saved-regions-change']();assert.match(h.element('saved-memo-counts').textContent,/地域の保存は未確認/);h.element('saved-region-memo').onclick();assert.match(h.element('saved-memo-status').textContent,/地域を読み込めません/);
+});

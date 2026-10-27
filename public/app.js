@@ -58,7 +58,7 @@ function searchRegions(){
 function resetNationalMap(){if(map&&mapViewport)mapViewport.fitNation(map)}
 function setupWithoutMap(){
  $('region-detail-slot').append($('detail-dialog'));
- $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
+ $('save-region').onclick=()=>{if(!selected)return;const name=selected.name;const wasSaved=favorites.has(selected);const ok=favorites.toggle(selected);renderSaved();document.dispatchEvent(new Event('bousai:saved-regions-change'));$('saved-region-status').textContent=ok?`${name}の保存を${wasSaved?'解除しました':'完了しました'}。`:'地域を保存できませんでした。ブラウザの保存設定や空き容量を確認してください。';};
  renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
  $('location-search').addEventListener('input',searchRegions);$('pref-filter').addEventListener('change',searchRegions);$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();if(map&&mapViewport)mapViewport.fitHome(map)};
  $('reset-map').onclick=()=>{resetNationalMap()};

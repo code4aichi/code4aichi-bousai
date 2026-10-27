@@ -5,7 +5,15 @@ const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,
 let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null,facilityDataPending=true;
 let facilityStorage;try{facilityStorage=window.localStorage}catch{}
 const savedFacilities=createFacilityFavorites(facilityStorage);
+function updateMemoCounts(){
+ const el=$('saved-memo-counts');if(!el)return;
+ const regionData=window.bousaiSavedRegionMemo?.();
+ const regionLabel=!regionData?'地域の保存を確認中':!regionData.available?'地域の保存は未確認':`地域${regionData.regions.length}件`;
+ const facilityLabel=savedFacilities.available()?`施設${savedFacilities.entries().length}件`:'施設の保存は未確認';
+ el.textContent=`${regionLabel} ／ ${facilityLabel}。メモは現在の保存内容を出力します。`;
+}
 function renderSavedManager(){
+ updateMemoCounts();
  const entries=savedFacilities.entries(),current=new Map(facilities.map(f=>[facilityIdentity(f),f])),matched=entries.filter(f=>current.has(facilityIdentity(f))).length;
  $('facility-saved-manager-title').textContent=`保存した施設を管理（${entries.length}件）`;
  $('facility-saved-note').textContent=savedFacilities.available()?`保存${entries.length}件（今回読み込んだデータで照合できた施設：${matched}件）。このブラウザ内に保存します。ほかの検索条件も適用されます。`:'保存した施設を読み込めません。ブラウザの保存設定をご確認ください。施設検索は引き続き利用できます。';
@@ -22,8 +30,8 @@ function removeSavedFacility(entry){
  $('facility-saved-manager-status').textContent=result.ok?(result.removed?`${entry.name}の保存を解除しました。`:`${entry.name}は既に保存から外れています。`):'保存を解除できませんでした。保存内容は維持しています。ブラウザの保存設定をご確認ください。';
  $('facility-saved-manager-status').focus();
 }
-function downloadFacilityMemo(){
- const status=$('facility-action-status');
+function downloadFacilityMemo(statusId='facility-action-status'){
+ const status=$(statusId);
  if(!savedFacilities.reload()){renderSavedManager();status.textContent='保存した施設を読み込めません。ブラウザの保存設定をご確認ください。';return}
  renderSavedManager();if(!window.bousaiSavedRegionMemo){status.textContent='保存した地域の読み込み準備ができていません。ページを再読み込みしてください。';return}const saved=savedFacilities.entries(),regionData=window.bousaiSavedRegionMemo();if(regionData&&!regionData.available){status.textContent='保存した地域を読み込めません。ブラウザの保存設定をご確認ください。';return}const regions=regionData?.regions||[];if(!saved.length&&!regions.length){status.textContent='先に一覧から地域または給水施設を保存してください。';return}
  let url;
@@ -116,9 +124,11 @@ function useSelectedRegion(){
  note.textContent=`${selection.name}の条件を設定しました。`;render();
  if(!filtered.length)note.textContent=`${selection.name}に一致する登録施設は今回の収録データにありません。施設がないことを意味しません。`;
 }
-$('facility-save-memo').onclick=downloadFacilityMemo;
+$('facility-save-memo').onclick=()=>downloadFacilityMemo();
+ const quick=$('saved-region-memo');if(quick){quick.hidden=false;quick.onclick=()=>downloadFacilityMemo('saved-memo-status')}
+ document.addEventListener('bousai:saved-regions-change',updateMemoCounts);
 $('facility-only-saved').addEventListener('change',render);
-window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();render()}});
+window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();render()}else if(e.key==='mieru-bosai:favorites:v1')updateMemoCounts()});
 $('facility-use-selection').onclick=useSelectedRegion;
 document.addEventListener('bousai:selection',()=>{updateSelectedFacilitySummary();const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
 $('facility-use-bounds').onclick=()=>{
@@ -137,7 +147,7 @@ $('facility-clear').onclick=()=>{searchBounds=null;$('facility-only-saved').chec
 $('facility-show-results').onclick=()=>{if(!loaded||!filtered.length||!window.bousaiMap)return;$('show-facilities').checked=true;draw();window.bousaiMap.fitBounds(L.latLngBounds(filtered.map(f=>[f.lat,f.lng])).pad(.06),{maxZoom:14});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'})};
 document.addEventListener('bousai:position',()=>{if(pending){pending=false;clearTimeout(pendingTimer);nearest=true}render()});
 document.addEventListener('bousai:position-error',()=>{pending=false;clearTimeout(pendingTimer);$('facility-distance-note').textContent='現在地を取得できませんでした。施設名・地域で検索できます。'});
-document.addEventListener('bousai:map-ready',()=>{if(loaded)render()});
+document.addEventListener('bousai:map-ready',()=>{updateMemoCounts();if(loaded)render()});
 setInterval(()=>{if(nearest&&!position())render()},30000);
 renderSavedManager();
 (async()=>{
