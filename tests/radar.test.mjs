@@ -15,7 +15,7 @@ test('metadata fetch uses the fixed official endpoint and rejects HTTP errors an
  await assert.rejects(()=>radarData(async()=>new Response('',{status:503}),now));await assert.rejects(()=>radarData(async()=>Response.json([row]),now+3600000));
 });
 function ui(fetcher=async()=>Response.json({ok:true,frame}),ImageClass,defaultOn=false,mapReady=true){
- const els=new Map(['show-radar','radar-status','radar-map-badge','radar-refresh'].map(id=>[id,{checked:false,disabled:false,hidden:false,dataset:{},events:{},addEventListener(e,f){this.events[e]=f}}]));
+ const els=new Map(['show-radar','radar-status','radar-map-badge','radar-refresh','radar-previous','radar-latest'].map(id=>[id,{checked:false,disabled:false,hidden:false,dataset:{},events:{},addEventListener(e,f){this.events[e]=f}}]));
  els.get('show-radar').checked=defaultOn;
  const layers=[],timers=[],events={};let clock=now;
  const map={getPane:()=>({}),createPane:()=>({style:{}})};
@@ -56,3 +56,21 @@ test('aborting a pending image probe cannot leave the request waiting or recreat
 });
 
 test('default-enabled radar waits for map readiness and does not re-enable after user switches it off',async()=>{const h=ui(undefined,undefined,true,false);assert.equal(h.layers.length,0);assert.equal(h.el('show-radar').checked,true);h.ready();await new Promise(r=>setImmediate(r));assert.equal(h.layers.length,1);h.off();h.ready();await new Promise(r=>setImmediate(r));assert.equal(h.layers.length,1);assert.equal(h.layers[0].removed,true)});
+
+test('past radar is verified, explicitly labelled, kept until latest is requested and removed when too old',async()=>{
+ class Img{naturalWidth=256;naturalHeight=256;set src(value){if(value)queueMicrotask(()=>this.onload?.())}}
+ const h=ui(undefined,Img);await h.enable();await h.el('radar-previous').onclick();
+ assert.match(h.layers[1].url,/20261026070500/);h.layers[1].events.load();
+ assert.match(h.el('radar-status').textContent,/過去の実況/);assert.match(h.el('radar-map-badge').textContent,/過去/);
+ assert.equal(h.el('radar-status').dataset.fetchState,'partial');h.timers[1]();assert.equal(h.layers.length,2);
+ await h.el('radar-latest').onclick();assert.match(h.layers[2].url,/20261026071000/);h.layers[2].events.load();assert.doesNotMatch(h.el('radar-map-badge').textContent,/過去/);
+ await h.el('radar-previous').onclick();h.clock(now+41*60000);h.timers[0]();assert.equal(h.el('radar-status').dataset.fetchState,'failed');assert.equal(h.layers.at(-1).removed,true);
+});
+test('unavailable previous radar image clears old layer and offers latest',async()=>{
+ class Img{set src(value){if(value)queueMicrotask(()=>this.onerror?.())}}
+ const h=ui(undefined,Img);await h.enable();await h.el('radar-previous').onclick();assert.equal(h.layers[0].removed,true);assert.match(h.el('radar-status').textContent,/取得できません/);assert.equal(h.el('radar-latest').disabled,false);
+});
+test('disabling while verifying previous image cannot add it later',async()=>{
+ let probe;class Img{set src(value){if(value)probe=this}}
+ const h=ui(undefined,Img);await h.enable();const pending=h.el('radar-previous').onclick();h.off();probe.onload?.();await pending;assert.equal(h.layers.length,1);assert.equal(h.el('radar-status').dataset.fetchState,'off');
+});
