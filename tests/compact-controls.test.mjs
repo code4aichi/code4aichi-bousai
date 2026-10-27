@@ -32,3 +32,5 @@ test('enabled radar failures are included in the toolbar, but disabled radar doe
 });
 
 test('flood layer affects summary only while enabled',()=>{const h=setup();h.el('flood-hazard-status').dataset.fetchState='partial';h.notify();assert.equal(h.el('map-fetch-health').dataset.state,'ok');h.el('show-flood-hazard').checked=true;h.events['show-flood-hazard:change']();assert.match(h.el('map-layer-summary').textContent,/洪水想定/);assert.equal(h.el('map-fetch-health').dataset.state,'partial')});
+
+test('toolbar identifies inland water separately from river flooding',()=>{const h=setup();h.el('show-flood-hazard').checked=true;h.el('flood-hazard-kind').value='inland';h.events['flood-hazard-kind:change']();assert.match(h.el('map-layer-summary').textContent,/内水想定/);assert.doesNotMatch(h.el('map-layer-summary').textContent,/洪水想定/)});
