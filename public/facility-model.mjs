@@ -50,6 +50,16 @@ export function facilitySelection(selection){
  return null;
 }
 
+export function selectedFacilitySummary(selection,{pending=false,loadedSources=[],facilities=[]}={}){
+ if(!selection)return '地域を選ぶと登録給水施設を確認できます。';
+ const target=facilitySelection(selection);
+ if(!target)return 'この地域の施設データは未収録です。施設がないことを意味しません。';
+ if(pending)return '登録給水施設データを取得しています。';
+ if(!loadedSources.includes(target.provider))return 'この地域の施設データを取得できず未確認です。';
+ const count=filterFacilities(facilities,target).length;
+ return `収録データに${count}件。施設の開設・給水状況は未確認です。${count?'':'施設がないことを意味しません。'}`;
+}
+
 export function inFacilityBounds(f,bounds){
  if(!bounds)return true;
  const {south,north,west,east}=bounds;

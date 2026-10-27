@@ -1,6 +1,6 @@
 import {buildFacilityMemo} from './facility-memo.mjs';
 import {createFacilityFavorites,FACILITY_SAVED_KEY,facilityIdentity} from './facility-favorites.mjs';
-import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,inFacilityBounds} from './facility-model.mjs';
+import {FACILITY_PROVIDERS,parseProviderFacilities,filterFacilities,usablePosition,facilitySelection,selectedFacilitySummary,inFacilityBounds} from './facility-model.mjs?v=5.9.0';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let facilities=[],filtered=[],group=null,markers=new Map(),nearest=false,pending=false,pendingTimer=null,loaded=false,loadedSources=[],visibleCount=30,searchBounds=null,facilityDataPending=true;
 let facilityStorage;try{facilityStorage=window.localStorage}catch{}
@@ -101,13 +101,16 @@ function refreshFilters(){
   for(const value of values){const option=document.createElement('option');option.value=value;option.textContent=value;$(id).append(option)}$(id).value=values.includes(before)?before:'';
  }
 }
+function updateSelectedFacilitySummary(){
+ const el=$('detail-facility-status');if(el)el.textContent=selectedFacilitySummary(window.bousaiCurrentSelection?.(),{pending:facilityDataPending,loadedSources:loadedSources.map(s=>s.id),facilities});
+}
 function useSelectedRegion(){
  const selection=window.bousaiCurrentSelection?.(),target=facilitySelection(selection),note=$('facility-selection-note');
  if(!selection){note.textContent='先に地図や地域一覧から自治体を選択してください。';return}
  if(!loaded){note.textContent='登録給水施設データを取得できていません。取得状況と自治体の公式情報をご確認ください。';return}
  if(!target){note.textContent=`${selection.name}の給水施設データは未収録です。施設がないことを意味しません。地域の水道・断水情報から公式情報をご確認ください。`;return}
  if(!loadedSources.some(s=>s.id===target.provider)){note.textContent=`${selection.name}の提供元データを取得できていません。施設の所在・状況は未確認です。`;return}
- searchBounds=null;$('facility-provider').value=target.provider;refreshFilters();$('facility-region').value=target.region;
+ searchBounds=null;$('facility-only-saved').checked=false;$('facility-provider').value=target.provider;refreshFilters();$('facility-region').value=target.region;
  $('facility-type').value='';$('facility-search').value=target.query;nearest=false;pending=false;clearTimeout(pendingTimer);
  $('facility-distance-note').textContent='選択した地域の登録施設です。開設・給水状況は未確認です。';
  note.textContent=`${selection.name}の条件を設定しました。`;render();
@@ -117,7 +120,7 @@ $('facility-save-memo').onclick=downloadFacilityMemo;
 $('facility-only-saved').addEventListener('change',render);
 window.addEventListener?.('storage',e=>{if(e.key===FACILITY_SAVED_KEY||e.key===null){savedFacilities.reload();render()}});
 $('facility-use-selection').onclick=useSelectedRegion;
-document.addEventListener('bousai:selection',()=>{const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
+document.addEventListener('bousai:selection',()=>{updateSelectedFacilitySummary();const p=window.bousaiCurrentSelection?.();$('facility-selection-note').textContent=p?`選択中：${p.name}。「選択した地域から探す」で条件を切り替えられます。`:''});
 $('facility-use-bounds').onclick=()=>{
  if(!loaded||!window.bousaiMap?.getBounds){$('facility-bounds-note').textContent='地図または登録施設データを利用できません。施設名や地域から検索してください。';return}
  const b=window.bousaiMap.getBounds(),bounds={south:b.getSouth(),north:b.getNorth(),west:b.getWest(),east:b.getEast()};
@@ -153,4 +156,5 @@ renderSavedManager();
   $('facility-source').innerHTML=loadedSources.map(s=>{const p=s.provider,recorded=s.data.source?.retrievedAt?.slice(0,10)||'不明';return `<span class="facility-source-item"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.name)}</a>：${s.rows.length}件 ／ <a href="${esc(p.licenseURL)}" target="_blank" rel="noopener noreferrer">${esc(p.license)}</a>。収録日：${esc(recorded)}。<a href="${p.originalURL}" download>収録原本</a></span>`}).join('')+'<span class="facility-source-item">名称・住所・数値等の元の各項目は変更せず保持。横浜市は公開CSVに含まれる施設が対象で、市のすべての給水施設を網羅するものではありません。</span>';
   render();
  }catch{facilityDataPending=false;loaded=false;renderSavedManager();group?.clearLayers();$('show-facilities').disabled=true;summary.textContent='登録給水施設データを取得できません。施設の所在・状況は未確認です。';summary.dataset.fetchState='failed';$('facility-list').textContent='公式ページからご確認ください。';$('facility-use-current').disabled=true;$('facility-show-results').disabled=true;}
+ finally{updateSelectedFacilitySummary()}
 })();

@@ -29,6 +29,7 @@ function detail(){
  if(provider){const labels={'no-listing':'緊急欄の掲載を確認できませんでした（断水なしの意味ではありません）',reports:'緊急欄に発表があります。対象区域・発表時刻は原文で確認してください',review:'発表内容または掲載形式が変わったため、原文の確認が必要です',unavailable:'公式ページを取得できず、状況は未確認です'};el.textContent=`${provider.name}：${labels[provider.state]||'未確認'}。${provider.scope} 確認：${date(provider.checkedAt)}`;return;}
  const notices=data.notices.filter(n=>n.referenceName===p.name||(p.name==='名古屋市'&&n.referenceName?.startsWith('名古屋市 ')));
  const covered=p.prefecture==='愛知'&&(p.name==='名古屋市'||p.name.startsWith('名古屋市 ')||['清須市','北名古屋市','大治町','あま市'].includes(p.name));
+ if(covered&&!data.sources?.some(s=>s.ok)){el.textContent='名古屋市上下水道局の工事予定を取得できず未確認です。災害・事故の断水の有無も判定できません。';return}
  el.textContent=covered?`先行連携：名古屋市上下水道局の本日から3日間の工事予定。登録された対象情報は${notices.length}件です。災害・事故の断水の有無は未判定です。`:'この地域の断水情報は自動連携していません。水道事業者の公式情報をご確認ください。';
 }
 function render(){

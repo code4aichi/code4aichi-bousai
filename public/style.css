@@ -182,3 +182,5 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 .map-status-row{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;min-width:0}
 .v2-map-head .map-status-row>span{min-width:0;overflow-wrap:anywhere}
 .map-action-row>[hidden],.map-status-row>[hidden]{display:none!important}
+
+.detail-jump{display:block;min-height:44px;margin:8px 0 4px;padding:8px 12px;border:1px solid #b7d3d0;border-radius:8px;background:#fff;color:#135d59;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.detail-jump:hover{background:#eaf7f4}.detail-jump:focus-visible{outline:3px solid #17635c;outline-offset:2px}.detail-panel #detail-facility-status{margin:6px 0}
