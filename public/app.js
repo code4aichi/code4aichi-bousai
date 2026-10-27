@@ -22,6 +22,7 @@ function openSavedRegion(p){
  if(map){map.stop();map.invalidateSize({pan:false});map.setView([p.lat,p.lng],14,{animate:false});}
  document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
+window.bousaiOpenSharedRegion=openSavedRegion;
 function matches(p){if(savedFocusId)return p.id===savedFocusId;const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
 function update(){filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
  const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
@@ -71,7 +72,7 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  let storage;try{storage=window.localStorage}catch{storage={getItem(){throw new Error('Storage unavailable')},setItem(){throw new Error('Storage unavailable')}}}
  favorites=createFavorites(storage,locations);
  setupWithoutMap();
- if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();document.dispatchEvent(new Event('bousai:map-ready'));return}
+ if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();window.bousaiMapReady=true;document.dispatchEvent(new Event('bousai:map-ready'));return}
  mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.7.0');
  map=L.map('map-canvas',{zoomControl:false,minZoom:2,zoomSnap:.5,scrollWheelZoom:false}).setView([35.1,137],5);
  mapViewport.fitHome(map);
@@ -80,6 +81,6 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
  window.bousaiMap=map;
  group=typeof L.markerClusterGroup==='function'?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:55,showCoverageOnHover:false}):L.layerGroup();group.addTo(map);
- update();document.dispatchEvent(new Event('bousai:map-ready'));
+ update();window.bousaiMapReady=true;document.dispatchEvent(new Event('bousai:map-ready'));
 }
 boot();
