@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {LINK_REVIEWS,resolveRegionLinks} from '../public/verified-links.mjs';
 const places=JSON.parse(fs.readFileSync(new URL('../public/locations.json',import.meta.url)));
 test('nine reviewed URLs overlay three exact municipalities without changing original rows or social accounts',()=>{
- assert.equal(LINK_REVIEWS.flatMap(r=>Object.keys(r.links)).length,9);
+ assert.equal(LINK_REVIEWS.flatMap(r=>Object.keys(r.links)).length,12);
  for(const name of ['名古屋市','横浜市','札幌市']){
   const p=places.find(p=>p.name===name),before=JSON.stringify(p),result=resolveRegionLinks(p);
   assert.equal(Object.keys(result.checks).length,3);assert.equal(result.links.x,p.links.x);assert.equal(JSON.stringify(p),before);
@@ -23,7 +23,7 @@ test('unsupported keys and unsafe or unrelated review destinations are not marke
  }
 });
 function detail(registry){
- const fields=new Map();const el=id=>{if(!fields.has(id))fields.set(id,{textContent:'',innerHTML:'',value:'',open:false,setAttribute(){},querySelectorAll:()=>[],show(){this.open=true}});return fields.get(id)};
+ const fields=new Map();const el=id=>{if(!fields.has(id))fields.set(id,{textContent:'',innerHTML:'',value:'',open:false,setAttribute(){},removeAttribute(){},querySelectorAll:()=>[],show(){this.open=true}});return fields.get(id)};
  const p=places.find(p=>p.name==='横浜市');
  const ctx=vm.createContext({window:{},Event,document:{getElementById:el,dispatchEvent(){}},matchMedia:()=>({matches:false}),testRegistry:registry,place:p});
  vm.runInContext(fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8').replace(/boot\(\);\s*$/,''),ctx);
@@ -35,4 +35,13 @@ test('region detail renders reviewed links and verification date while keeping o
 });
 test('region detail remains usable with explicit legacy status when review module is unavailable',()=>{
  const el=detail(null);assert.match(el('detail-links-v2').innerHTML,/http:\/\/www.city.yokohama.lg.jp/);assert.match(el('detail-link-audit').textContent,/全件未検証/);
+});
+
+test('three Aichi water links apply only to the exact municipality and retain original data',()=>{
+ for(const name of ['豊田市','豊橋市','豊川市']){
+  const place=places.find(p=>p.name===name&&p.prefecture==='愛知');const before=JSON.stringify(place);
+  const result=resolveRegionLinks(place);assert.equal(result.checks.water.checkedAt,'2026-10-27');
+  assert.match(result.checks.water.label,/情報/);assert.equal(JSON.stringify(place),before);
+  assert.deepEqual(resolveRegionLinks({...place,prefecture:'他県'}).checks,{});
+ }
 });
