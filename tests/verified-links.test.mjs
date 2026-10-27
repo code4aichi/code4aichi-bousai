@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {LINK_REVIEWS,resolveRegionLinks} from '../public/verified-links.mjs';
 const places=JSON.parse(fs.readFileSync(new URL('../public/locations.json',import.meta.url)));
 test('nine reviewed URLs overlay three exact municipalities without changing original rows or social accounts',()=>{
- assert.equal(LINK_REVIEWS.flatMap(r=>Object.keys(r.links)).length,12);
+ assert.equal(LINK_REVIEWS.flatMap(r=>Object.keys(r.links)).length,16);
  for(const name of ['名古屋市','横浜市','札幌市']){
   const p=places.find(p=>p.name===name),before=JSON.stringify(p),result=resolveRegionLinks(p);
   assert.equal(Object.keys(result.checks).length,3);assert.equal(result.links.x,p.links.x);assert.equal(JSON.stringify(p),before);
@@ -44,4 +44,14 @@ test('three Aichi water links apply only to the exact municipality and retain or
   assert.match(result.checks.water.label,/情報/);assert.equal(JSON.stringify(place),before);
   assert.deepEqual(resolveRegionLinks({...place,prefecture:'他県'}).checks,{});
  }
+});
+
+test('new Aichi official links keep advice pages distinct from live outage feeds',()=>{
+ for(const name of ['一宮市','岡崎市','刈谷市','春日井市']){
+  const p=places.find(p=>p.name===name&&p.prefecture==='愛知'),result=resolveRegionLinks(p);
+  assert.equal(result.checks.water.checkedAt,'2026-10-27');assert.match(result.links.water,/^https:\/\//);
+  assert.deepEqual(resolveRegionLinks({...p,prefecture:'他県'}).checks,{});
+ }
+ assert.match(resolveRegionLinks(places.find(p=>p.name==='岡崎市')).checks.water.label,/案内/);
+ assert.match(resolveRegionLinks(places.find(p=>p.name==='刈谷市')).checks.water.label,/トラブル/);
 });

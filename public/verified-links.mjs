@@ -1,6 +1,10 @@
 // URL checks are snapshots, not guarantees about current disaster conditions.
 const record=(url,checkedAt='2026-10-25',label=null)=>({url,checkedAt,evidenceURL:url,method:'official-page-review',...(label?{label}:{})});
 export const LINK_REVIEWS=[
+ {name:'一宮市',prefecture:'愛知',links:{water:record('https://www.city.ichinomiya.aichi.jp/jougesuidou/jougesuidoukinkyuu/1044043/1030934/index.html','2026-10-27','一宮市 水道・下水道の事故・災害情報')}},
+ {name:'岡崎市',prefecture:'愛知',links:{water:record('https://www.city.okazaki.lg.jp/water/info/1003232/1003238.html','2026-10-27','岡崎市 断水工事の案内')}},
+ {name:'刈谷市',prefecture:'愛知',links:{water:record('https://www.city.kariya.lg.jp/kurashi/suido/guide/1004268.html','2026-10-27','刈谷市 水道のトラブル・連絡先')}},
+ {name:'春日井市',prefecture:'愛知',links:{water:record('https://www.city.kasugai.lg.jp/kurashi/1020797/1020870/1021206/index.html','2026-10-27','春日井市 水道・下水道のトラブル')}},
  {name:'豊田市',prefecture:'愛知',links:{water:record('https://www.city.toyota.aichi.jp/sumaikankyo/jogesuido/index.html','2026-10-27','豊田市 上下水道・緊急情報')}},
  {name:'豊橋市',prefecture:'愛知',links:{water:record('https://www.city.toyohashi.lg.jp/16946.htm','2026-10-27','豊橋市 断水・濁水情報')}},
  {name:'豊川市',prefecture:'愛知',links:{water:record('https://www.city.toyokawa.lg.jp/kurashi_tetsuzuki/jogesuido/1/6/12159.html','2026-10-27','豊川市 断水・濁水情報')}},
@@ -9,7 +13,7 @@ export const LINK_REVIEWS=[
  {name:'札幌市',prefecture:'北海道',links:{official:record('https://www.city.sapporo.jp/'),disaster:record('https://www.city.sapporo.jp/kikikanri/'),water:record('https://www.city.sapporo.jp/suido/')}}
 ];
 const normal=s=>String(s??'').normalize('NFKC').replace(/\s+/g,'');
-const hosts=new Set(['www.city.nagoya.jp','www.water.city.nagoya.jp','www.city.yokohama.lg.jp','www.city.sapporo.jp','www.city.toyota.aichi.jp','www.city.toyohashi.lg.jp','www.city.toyokawa.lg.jp']);
+const hosts=new Set(['www.city.nagoya.jp','www.water.city.nagoya.jp','www.city.yokohama.lg.jp','www.city.sapporo.jp','www.city.toyota.aichi.jp','www.city.toyohashi.lg.jp','www.city.toyokawa.lg.jp','www.city.ichinomiya.aichi.jp','www.city.okazaki.lg.jp','www.city.kariya.lg.jp','www.city.kasugai.lg.jp']);
 function officialURL(s){try{const u=new URL(s);return u.protocol==='https:'&&hosts.has(u.hostname)&&!u.username&&!u.password&&!u.port}catch{return false}}
 export function resolveRegionLinks(place,reviews=LINK_REVIEWS){
  const links={...place?.links},checks={};

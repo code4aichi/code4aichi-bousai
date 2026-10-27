@@ -66,7 +66,7 @@ function setupWithoutMap(){
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
 }
 async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);locations=await r.json();if(!Array.isArray(locations))throw new Error('Invalid locations')}catch(e){$('map-canvas').textContent='地域データを読み込めませんでした。ページを再読み込みしてください。';return}
- try{linkRegistry=await import('/mieru-bosai/verified-links.mjs?v=5.9.1')}catch{linkRegistry=null}
+ try{linkRegistry=await import('/mieru-bosai/verified-links.mjs?v=5.11.1')}catch{linkRegistry=null}
  const prefs=[...new Set(locations.map(x=>x.prefecture))].sort((a,b)=>a.localeCompare(b,'ja'));for(const p of prefs){const option=document.createElement('option');option.value=p;option.textContent=p;$('pref-filter').append(option)}
  const {createFavorites}=await import('/mieru-bosai/favorites.mjs?v=4.2.0');
  let storage;try{storage=window.localStorage}catch{storage={getItem(){throw new Error('Storage unavailable')},setItem(){throw new Error('Storage unavailable')}}}
