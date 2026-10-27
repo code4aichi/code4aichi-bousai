@@ -5,7 +5,7 @@ import vm from 'node:vm';
 function setup(){
  const items=new Map(),events={};let notify;
  const el=id=>{if(!items.has(id))items.set(id,{textContent:'取得完了',checked:true,dataset:{},classList:{contains:()=>false},querySelectorAll:()=>[],addEventListener:(event,fn)=>events[id+':'+event]=fn});return items.get(id)};
- for(const id of ['show-planned-water','show-advisories','show-facilities','show-radar'])el(id).checked=false;
+ for(const id of ['show-planned-water','show-advisories','show-facilities','show-radar','show-flood-hazard'])el(id).checked=false;
  const ctx=vm.createContext({MutationObserver:class{constructor(fn){notify=fn}observe(){}},document:{getElementById:el,addEventListener:(event,fn)=>events[event]=fn}});
  vm.runInContext(fs.readFileSync(new URL('../public/compact-controls.js',import.meta.url),'utf8'),ctx);return {el,events,notify:()=>notify()};
 }
@@ -30,3 +30,5 @@ test('successful facility data retrieval is distinct from unconfirmed facility o
 test('enabled radar failures are included in the toolbar, but disabled radar does not block other sources',()=>{
  const h=setup();h.el('radar-status').dataset.fetchState='failed';h.notify();assert.equal(h.el('map-fetch-health').dataset.state,'ok');h.el('show-radar').checked=true;h.events['show-radar:change']();assert.equal(h.el('map-fetch-health').dataset.state,'failed');assert.match(h.el('map-layer-summary').textContent,/雨雲/);
 });
+
+test('flood layer affects summary only while enabled',()=>{const h=setup();h.el('flood-hazard-status').dataset.fetchState='partial';h.notify();assert.equal(h.el('map-fetch-health').dataset.state,'ok');h.el('show-flood-hazard').checked=true;h.events['show-flood-hazard:change']();assert.match(h.el('map-layer-summary').textContent,/洪水想定/);assert.equal(h.el('map-fetch-health').dataset.state,'partial')});
