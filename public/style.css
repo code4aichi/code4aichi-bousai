@@ -206,3 +206,35 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
 .guide-entry{display:inline-flex;width:100%;align-items:center;justify-content:center;gap:5px;min-height:38px;padding:5px 12px;border:1px solid #a5cfc9;border-radius:8px;background:#eaf7f3;color:#155c56;font-size:12px;font-weight:700;line-height:1.4;white-space:normal;text-align:center}
 .guide-entry>span{display:grid;place-items:center;width:20px;height:20px;flex:none;border-radius:50%;background:#17635c;color:#fff;font-size:12px}.guide-entry:hover{background:#ddf1eb}.guide-entry:focus-visible{outline:3px solid #17635c;outline-offset:2px}
 @media(max-width:800px){.portal-heading{flex-wrap:wrap;gap:4px}.portal-actions{margin-left:auto;max-width:100%}.guide-entry{min-height:40px;padding:6px 10px}}
+
+/* Map-first layout: keep search, map settings and selected region together. */
+@media (min-width:801px){
+ .v2-map-shell{grid-template-columns:minmax(0,3fr) minmax(340px,2fr);height:880px;min-height:880px;align-items:stretch}
+ .v2-map-area{height:100%;min-height:0}
+ .v2-results{height:100%;overflow-y:auto}
+}
+.v2-results{padding:16px;gap:12px;align-items:stretch}
+.v2-results .purpose-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0}
+.v2-results .purpose-shortcuts a{min-width:0;min-height:44px;padding:7px 4px;font-size:12px;line-height:1.35;text-align:center;overflow-wrap:anywhere}
+.v2-results .v2-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:0}
+.v2-results .v2-search{grid-column:1/-1;width:100%;padding:8px 12px;min-height:48px}
+.v2-results .v2-controls select{width:100%;max-width:none;min-width:0;padding:10px;font-size:14px}
+.v2-results .v2-outline{padding:8px 12px}
+.v2-results .map-tools{display:flex;flex-direction:column;gap:8px;margin:0}
+.v2-results .map-settings{order:0;margin:0}
+.v2-results .saved-regions{order:1;margin:0}
+.v2-results #region-browser{height:auto;min-height:0;flex:none;border:1px solid #dce8ed;border-radius:10px;overflow:hidden}
+.v2-results #region-browser[hidden]{display:none!important}
+.v2-results .v2-results-heading{padding:10px 12px}
+.v2-results .v2-results-heading strong{font-size:14px}
+.v2-results .v2-list{max-height:300px;overflow-y:auto}
+.v2-results .v2-place{min-height:54px;padding:9px 12px}
+.v2-results .v2-result-foot{padding:8px 12px}
+.region-prompt{margin:0;padding:16px;border:1px solid #dce8ed;border-radius:10px;color:#526c78;background:#f8fbfb;font-size:13px;line-height:1.7}
+#region-detail-slot:not(:empty){border:1px solid #dce8ed;border-radius:10px;overflow:hidden}
+@media (max-width:800px){
+ .v2-map-shell{height:auto;min-height:0}
+ .v2-results{height:auto;max-height:none;padding:12px;overflow:visible;border-left:0}
+ .v2-results .purpose-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .v2-results .v2-controls select{font-size:16px}
+}

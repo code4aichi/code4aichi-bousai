@@ -24,7 +24,7 @@ function openSavedRegion(p){
 }
 window.bousaiOpenSharedRegion=openSavedRegion;
 function matches(p){if(savedFocusId)return p.id===savedFocusId;const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
-function update(){filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
+function update(){const searching=Boolean($('location-search').value.trim()||$('pref-filter').value);$('region-browser').hidden=!searching||$('detail-dialog').open;$('region-prompt').hidden=searching||$('detail-dialog').open;filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
  const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
  list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const p=locations.find(x=>x.id===el.dataset.id);select(p,true)});
  if(group){group.clearLayers();filtered.forEach(p=>{const severity=window.bousaiSeverity?.(p)||0;const marker=L.marker([p.lat,p.lng],{title:p.name,...(severity?{icon:L.divIcon({className:'bousai-marker-container',html:`<span class="bousai-marker level-${severity}" aria-label="警報表示">!</span>`,iconSize:[30,36],iconAnchor:[15,36]})}:{icon:L.divIcon({className:'municipality-marker',html:'<span aria-hidden="true">●</span>',iconSize:[22,22],iconAnchor:[11,11]})})});marker.bindTooltip(esc(p.name));marker.on('click',()=>select(p,false));group.addLayer(marker)})}
@@ -62,7 +62,7 @@ function setupWithoutMap(){
  renderSaved();if(!favorites.available())$('saved-region-status').textContent='保存した地域を読み込めませんでした。地域検索は引き続き利用できます。';
  $('location-search').addEventListener('input',searchRegions);$('pref-filter').addEventListener('change',searchRegions);$('clear-filters').onclick=()=>{savedFocusId=null;$('location-search').value='';$('pref-filter').value='';selected=null;$('detail-dialog').close();$('region-browser').hidden=false;update();if(map&&mapViewport)mapViewport.fitHome(map)};
  $('reset-map').onclick=()=>{resetNationalMap()};
- $('detail-close').onclick=()=>{$('detail-dialog').close();$('region-browser').hidden=false;document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
+ $('detail-close').onclick=()=>{$('detail-dialog').close();update();document.querySelector('.v2-place.selected')?.focus()};$('detail-dialog').addEventListener('close',()=>update());$('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog'))$('detail-dialog').close()});
  $('mobile-menu').onclick=()=>document.querySelector('.nav').classList.toggle('open');document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>document.querySelector('.nav').classList.remove('open'));
 }
 async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);locations=await r.json();if(!Array.isArray(locations))throw new Error('Invalid locations')}catch(e){$('map-canvas').textContent='地域データを読み込めませんでした。ページを再読み込みしてください。';return}
@@ -73,7 +73,7 @@ async function boot(){let r;try{r=await fetch('/mieru-bosai/locations.json');if(
  favorites=createFavorites(storage,locations);
  window.bousaiSavedRegionMemo=()=>{const snapshot=createFavorites(storage,locations);return {available:snapshot.available(),regions:snapshot.all().map(p=>({name:p.name,prefecture:p.prefecture,checks:linkRegistry?.resolveRegionLinks(p).checks||{}}))}};
  setupWithoutMap();
- if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域一覧・検索から公式情報を確認できます。</div>';update();window.bousaiMapReady=true;document.dispatchEvent(new Event('bousai:map-ready'));return}
+ if(typeof L==='undefined'){$('map-canvas').innerHTML='<div class="map-loading">地図を読み込めませんでした。地域検索から公式情報を確認できます。</div>';update();window.bousaiMapReady=true;document.dispatchEvent(new Event('bousai:map-ready'));return}
  mapViewport=await import('/mieru-bosai/map-viewport.mjs?v=5.17.2');
  map=L.map('map-canvas',{zoomControl:false,minZoom:2,zoomSnap:.25,scrollWheelZoom:false}).setView([34.05,138],5);
  mapViewport.fitHome(map);
