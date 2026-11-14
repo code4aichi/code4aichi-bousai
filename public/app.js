@@ -24,7 +24,7 @@ function openSavedRegion(p){
 }
 window.bousaiOpenSharedRegion=openSavedRegion;
 function matches(p){if(savedFocusId)return p.id===savedFocusId;const q=norm($('location-search').value),pref=$('pref-filter').value;return (!pref||p.prefecture===pref)&&(!q||norm([p.name,p.prefecture,p.address].join(' ')).includes(q))}
-function update(){const searching=Boolean($('location-search').value.trim()||$('pref-filter').value);$('region-browser').hidden=!searching||$('detail-dialog').open;$('region-prompt').hidden=searching||$('detail-dialog').open;filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
+function update(){const searching=Boolean($('location-search').value.trim()||$('pref-filter').value);$('region-browser').hidden=!searching||$('detail-dialog').open;$('region-prompt').hidden=$('detail-dialog').open;$('region-summary').hidden=!$('detail-dialog').open;filtered=locations.filter(matches);$('result-count').textContent=`${filtered.length.toLocaleString('ja-JP')}件`;
  const list=$('location-list');const max=100;list.innerHTML=filtered.length?filtered.slice(0,max).map(p=>`<button type="button" class="v2-place ${selected?.id===p.id?'selected':''}" data-id="${esc(p.id)}"><span class="v2-pin" data-alert-icon="${esc(p.id)}">${window.bousaiBadge?.(p)||'⌖'}</span><span><b>${esc(p.name)}</b><small>${esc(p.prefecture)}${p.address?' · '+esc(p.address):''}</small></span><span class="v2-chevron">›</span></button>`).join('')+ (filtered.length>max?`<p class="v2-more">${(filtered.length-max).toLocaleString('ja-JP')}件は検索・地図の拡大で絞り込めます</p>`:''):'<p class="v2-more">該当する地点がありません。</p>';
  list.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const p=locations.find(x=>x.id===el.dataset.id);select(p,true)});
  if(group){group.clearLayers();filtered.forEach(p=>{const severity=window.bousaiSeverity?.(p)||0;const marker=L.marker([p.lat,p.lng],{title:p.name,...(severity?{icon:L.divIcon({className:'bousai-marker-container',html:`<span class="bousai-marker level-${severity}" aria-label="警報表示">!</span>`,iconSize:[30,36],iconAnchor:[15,36]})}:{icon:L.divIcon({className:'municipality-marker',html:'<span aria-hidden="true">●</span>',iconSize:[22,22],iconAnchor:[11,11]})})});marker.bindTooltip(esc(p.name));marker.on('click',()=>select(p,false));group.addLayer(marker)})}
@@ -34,7 +34,7 @@ window.bousaiCurrentSelection=()=>selected;
 window.bousaiLocations=()=>locations;
 window.bousaiRerender=update;
 window.bousaiShowDetail=showDetail;
-function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
+function showDetail(p){selected=p;$('region-detail-slot').hidden=true;$('summary-details').setAttribute('aria-expanded','false');$('summary-details').textContent='地域の詳しい情報を見る';renderSaved();document.dispatchEvent(new Event('bousai:selection'));$('detail-title').textContent=p.name;$('detail-subtitle').textContent=p.prefecture;$('detail-address').textContent=p.address||'住所情報は登録されていません。';
  const names={official:'自治体サイト（登録リンク）',disaster:'災害・防災情報',water:'水道・断水情報',utility:'水道事業者',x:'登録X（旧Twitter）',disasterX:'防災関連X',facebook:'Facebook'};
  const resolved=linkRegistry?.resolveRegionLinks(p)||{links:p.links||{},checks:{}};
  const direct=$('detail-official-water');const waterCheck=resolved.checks.water;direct.hidden=!waterCheck;if(waterCheck){direct.href=waterCheck.url;direct.textContent=(waterCheck.label||'水道の公式ページ')+' ↗'}else{direct.removeAttribute('href');direct.textContent=''}
@@ -45,7 +45,7 @@ function showDetail(p){selected=p;renderSaved();document.dispatchEvent(new Event
  $('detail-links-v2').innerHTML=links.length?sections.map(([title,keys])=>{const items=links.filter(([k])=>keys.includes(k));return items.length?`<div class="link-category"><h3>${esc(title)}</h3>${items.map(linkHTML).join('')}</div>`:''}).join('')+links.filter(([k])=>!sections.some(([,keys])=>keys.includes(k))).map(linkHTML).join(''):'<p>登録された関連リンクはありません。</p>';
  $('detail-x').href='https://x.com/search?q='+encodeURIComponent(p.name+' (断水 OR 災害 OR 避難)')+'&f=live';
  window.bousaiXDetail?.(p);
- const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(!savedFocusId&&matchMedia('(max-width: 800px)').matches)dialog.scrollIntoView({behavior:'smooth',block:'start'});
+ const dialog=$('detail-dialog');$('region-browser').hidden=true;if(!dialog.open)dialog.show();update();window.bousaiRefreshDetails?.();if(!savedFocusId&&matchMedia('(max-width: 800px)').matches)$('region-summary').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function focusData(){if(!map||!filtered.length)return;const bounds=L.latLngBounds(filtered.map(p=>[p.lat,p.lng]));map.fitBounds(bounds.pad(.08),{maxZoom:12,animate:true});}
 function searchRegions(){

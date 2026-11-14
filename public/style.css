@@ -238,3 +238,19 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .v2-results .purpose-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
  .v2-results .v2-controls select{font-size:16px}
 }
+
+/* Region guidance and selected-region summary. */
+.region-prompt strong{display:block;color:#174a58;font-size:15px}
+.region-prompt p{margin:6px 0 8px}
+.region-prompt ol{margin:8px 0;padding-left:1.5em;line-height:1.8}
+.region-prompt a{display:inline-block;margin-top:6px;color:#08645d;font-weight:700;text-decoration:underline}
+.region-summary{border:1px solid #c9e1dc;border-radius:10px;background:#f7fbfa;padding:16px;min-width:0}
+.region-summary-head p{margin:0 0 3px;color:#52746f;font-size:12px;font-weight:700}
+.region-summary-head h2{font-size:17px;line-height:1.45;margin:0;overflow-wrap:anywhere}
+.region-summary-note{font-size:12px;line-height:1.6;color:#526c78;margin:6px 0 10px}
+.region-summary-item{border-top:1px solid #d9e9e5;padding:10px 0}
+.region-summary-item h3{font-size:13px;color:#17635c;margin:0 0 4px}
+.region-summary-item p{font-size:12px;line-height:1.7;color:#314e5d;margin:0;overflow-wrap:anywhere}
+#region-summary button{min-height:44px;width:100%;border:1px solid #17635c;border-radius:8px;padding:9px 12px;background:#17635c;color:white;font-size:13px;font-weight:700}
+#region-summary button:hover{background:#104f4a}
+#region-summary[hidden],#region-detail-slot[hidden]{display:none!important}
