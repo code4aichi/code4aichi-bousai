@@ -11,8 +11,9 @@
   if(!group){group=L.layerGroup().addTo(window.bousaiMap)}group.clearLayers();markers.clear();
   if(!$('show-earthquakes').checked||!lastSuccess||Date.now()-lastSuccess>120000)return;
   for(const r of reports.filter(mapEligible)){
-   const marker=L.marker([r.coordinates.lat,r.coordinates.lng],{title:`地震の震源：${r.hypocenter||'名称不明'}`,icon:L.divIcon({className:'seismic-origin',html:'<span aria-hidden="true">◆</span>',iconSize:[28,28],iconAnchor:[14,14]})});
-   marker.bindPopup(`<b>地震の震源：${esc(r.hypocenter||'名称不明')}</b><p>発生：${esc(when(r.originTime))}<br>最大震度：${esc(intensity(r.maxIntensity))}</p><p>震源の位置です。被害範囲は示しません。</p>`);group.addLayer(marker);markers.set(r.sourceURL,marker);
+   const level=window.bousaiIntensityStyle?.(r.maxIntensity)||{label:'不明',kind:'unknown'};
+   const marker=L.marker([r.coordinates.lat,r.coordinates.lng],{title:`地震の震源：${r.hypocenter||'名称不明'}・最大震度${level.label}`,icon:L.divIcon({className:'seismic-origin seismic-intensity seismic-intensity-'+level.kind,html:`<span aria-hidden="true">${esc(level.label)}</span>`,iconSize:[34,34],iconAnchor:[17,17]})});
+   marker.bindPopup(`<b>地震の震源：${esc(r.hypocenter||'名称不明')}</b><p>発生：${esc(when(r.originTime))}<br>最大震度：${esc(intensity(r.maxIntensity))}<br>マグニチュード：${esc(r.magnitude&&Number.isFinite(Number(r.magnitude))?r.magnitude:'不明')}</p><p>震源の位置と、この地震で観測された最大震度です。震源地の震度や被害範囲は示しません。</p>`);group.addLayer(marker);markers.set(r.sourceURL,marker);
   }
  }
  function focus(r){

@@ -286,3 +286,11 @@ body{line-height:1.7}.portal-scope{font-size:14px;line-height:1.8;color:#405f70;
  .region-summary-item{padding:10px 0}
 }
 .region-prompt[hidden]{display:none!important}
+
+/* Observed maximum intensity at the epicentre and status of available feeds. */
+.seismic-origin.seismic-intensity{background:none;border:0;text-shadow:none;font-size:12px;line-height:1}
+.seismic-intensity span{display:grid;place-items:center;width:34px;height:34px;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 6px #102d3d88;color:#fff;background:#657b88;font-size:12px;font-weight:800;white-space:nowrap}
+.seismic-intensity-low span{background:#467690}.seismic-intensity-three span{background:#e4c63d;color:#352f0b}.seismic-intensity-four span{background:#d57d19}.seismic-intensity-five span{background:#c63f35}.seismic-intensity-six span{background:#873b81}.seismic-intensity-unknown span{background:#657b88;font-size:10px}
+.disaster-status{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border:1px solid #c5deda;border-left:5px solid #288679;border-radius:9px;background:#edf8f5;color:#174b49;font-size:13px;line-height:1.6}
+.disaster-status strong{font-size:14px}.disaster-status[data-state=unknown]{border-color:#d0dce2;border-left-color:#718591;background:#f3f6f7;color:#3e5663}.disaster-status[data-state=attention]{border-color:#edcf9c;border-left-color:#d48a17;background:#fff7e9;color:#744c12}.disaster-status[data-state=important]{border-color:#e7b6af;border-left-color:#b6382d;background:#fff0ee;color:#8d2d26}
+.major-earthquake{margin:0 0 12px;padding:14px 16px;border:1px solid #df9a92;border-left:5px solid #b6382d;border-radius:9px;background:#fff2f0;color:#762c26;font-size:13px}.major-earthquake[hidden]{display:none!important}.major-earthquake strong{font-size:16px}.major-earthquake p{margin:6px 0;line-height:1.7}.major-earthquake-note{font-size:12px}.major-earthquake a{display:inline-block;color:#812e27;text-decoration:underline;font-weight:700;margin-right:12px}.major-earthquake button{min-height:44px;padding:7px 12px;border:1px solid #b6382d;border-radius:7px;background:#fff;color:#812e27;font:inherit;font-weight:700}.major-earthquake button[hidden]{display:none}
