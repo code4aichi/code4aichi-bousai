@@ -37,9 +37,26 @@
   else if(warning){state='attention';title='気象警報が発表されています';desc='取得できた全国の登録地点に警報があります。対象地域や詳細は公式情報をご確認ください。'}
   else if(!seismicFresh||!data.complete||!weatherFresh){state='unknown';title='一部の防災情報は未確認';desc='情報の取得状況や対象範囲をご確認ください。最新の状況は公式発表でご確認ください。'}
   else{state='normal';title='地震・気象情報を表示中';desc='取得した情報の範囲に限ります。地域の安全を保証するものではありません。'}
+  if((selected||warning)&&(!seismicFresh||!data?.complete||!weatherFresh))desc+=' 一部情報は未確認です。';
   $('disaster-status').dataset.state=state;$('disaster-status-title').textContent=title;$('disaster-status-description').textContent=desc;
+  const count=Array.isArray(weather?.points)?weather.points.filter(p=>p.checked).length:0;
+  const total=Array.isArray(weather?.points)?weather.points.length:0;
+  const seismicText=seismicFresh?`地震：${format(data.retrievedAt)}取得${data.complete?'':'（一部未取得）'}`:'地震：取得状況未確認';
+  const weatherText=weatherFresh?`気象：${format(weather.retrievedAt)}取得・照合${count}/${total}地点`:'気象：取得状況未確認';
+  $('disaster-national-coverage').textContent=`全国の取得状況｜${seismicText} ／ ${weatherText}`;
+  const chosen=window.bousaiCurrentSelection?.(),dialog=$('detail-dialog');
+  const point=chosen&&Array.isArray(weather?.points)?weather.points.find(p=>p.id===chosen.id):null;
+  let regional='地域を選ぶと気象情報を表示します。';
+  if(chosen&&dialog?.open){
+   if(!weatherFresh||!point?.checked)regional=`選択地域：${chosen.name}｜気象警報・注意報は未確認。公式発表をご確認ください。`;
+   else {const items=Array.isArray(point.items)?point.items:[];const names=items.map(x=>x.name).filter(Boolean);regional=names.length?`選択地域：${chosen.name}｜${names.join('、')}（取得した発表情報）`:`選択地域：${chosen.name}｜取得した発表情報に警報・注意報は含まれていません。安全を保証するものではありません。`;}
+  }
+  $('disaster-selected-region').textContent=regional;
  }
  $('major-earthquake-map').addEventListener('click',()=>{if(!selected?.coordinates||!window.bousaiMap)return;const p=selected.coordinates;$('show-earthquakes').checked=true;$('show-earthquakes').dispatchEvent(new Event('change'));window.bousaiMap.stop();window.bousaiMap.invalidateSize({pan:false});window.bousaiMap.setView([p.lat,p.lng],7,{animate:false});document.querySelector('.v2-map-shell')?.scrollIntoView({behavior:'smooth',block:'start'});});
  for(const event of ['bousai:seismic-data','bousai:rain-update','bousai:map-ready','visibilitychange'])document.addEventListener(event,render);
+ document.addEventListener('bousai:selection',()=>queueMicrotask(render));
+ for(const id of ['location-search','pref-filter','clear-filters'])$(id)?.addEventListener(id==='location-search'?'input':id==='pref-filter'?'change':'click',()=>queueMicrotask(render));
+ $('detail-dialog')?.addEventListener('close',()=>queueMicrotask(render));
  setInterval(render,30000);render();
 })();
